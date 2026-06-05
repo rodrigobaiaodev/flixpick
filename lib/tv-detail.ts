@@ -1,22 +1,20 @@
 import {
-  getMovieDetails,
-  getWatchProviders,
-  mapTmdbMovieToMovie,
+  getTVDetails,
+  getTVWatchProviders,
+  mapTmdbTVToContentItem,
 } from "@/lib/tmdb";
 import { getGenreDisplayName } from "@/lib/genres";
-import type { Genre, Movie, Person } from "@/types/movie";
+import type { ContentItem, Genre, Person } from "@/types/movie";
 
 const LANGUAGE = "en-US";
 
 const KEY_CREW_JOBS = [
   "Director",
-  "Screenplay",
-  "Writer",
-  "Story",
-  "Producer",
   "Executive Producer",
-  "Director of Photography",
-  "Original Music Composer",
+  "Producer",
+  "Writer",
+  "Creator",
+  "Series Creator",
 ] as const;
 
 interface TmdbCastMember {
@@ -40,13 +38,13 @@ interface TmdbCreditsResponse {
   crew: TmdbCrewMember[];
 }
 
-interface TmdbSimilarResponse {
+interface TmdbSimilarTVResponse {
   results: {
     id: number;
-    title: string;
-    original_title: string;
+    name: string;
+    original_name: string;
     overview: string;
-    release_date: string;
+    first_air_date: string;
     poster_path: string | null;
     backdrop_path: string | null;
     vote_average: number;
@@ -66,15 +64,6 @@ interface TmdbVideo {
 
 interface TmdbVideosResponse {
   results: TmdbVideo[];
-}
-
-interface TmdbMovieExtended {
-  budget: number;
-  revenue: number;
-  status: string;
-  original_language: string;
-  production_countries: { name: string }[];
-  spoken_languages: { english_name: string }[];
 }
 
 export interface ContentVideo {
@@ -120,8 +109,8 @@ function mapGenresFromIds(genreIds?: number[]): Genre[] {
   }));
 }
 
-export async function getMovieCast(movieId: number): Promise<Person[]> {
-  const data = await tmdbFetch<TmdbCreditsResponse>(`/movie/${movieId}/credits`);
+export async function getTVCast(tvId: number): Promise<Person[]> {
+  const data = await tmdbFetch<TmdbCreditsResponse>(`/tv/${tvId}/credits`);
 
   return data.cast
     .sort((a, b) => a.order - b.order)
@@ -134,8 +123,8 @@ export async function getMovieCast(movieId: number): Promise<Person[]> {
     }));
 }
 
-export async function getMovieCrew(movieId: number): Promise<Person[]> {
-  const data = await tmdbFetch<TmdbCreditsResponse>(`/movie/${movieId}/credits`);
+export async function getTVCrew(tvId: number): Promise<Person[]> {
+  const data = await tmdbFetch<TmdbCreditsResponse>(`/tv/${tvId}/credits`);
 
   const seen = new Set<string>();
   const crew: Person[] = [];
@@ -156,43 +145,44 @@ export async function getMovieCrew(movieId: number): Promise<Person[]> {
   return crew;
 }
 
-function formatCurrency(amount: number): string {
-  if (!amount) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-export async function getMovieTechnicalDetails(
-  movieId: number,
+export async function getTVTechnicalDetails(
+  tvId: number,
+  show: ContentItem,
   crew: Person[],
 ): Promise<TechnicalDetailRow[]> {
-  const data = await tmdbFetch<TmdbMovieExtended>(`/movie/${movieId}`);
-  const director = crew.find((p) => p.job === "Director");
+  const extended = await tmdbFetch<{
+    original_language: string;
+    origin_country: string[];
+  }>(`/tv/${tvId}`);
+
+  const creator =
+    crew.find((p) => p.job === "Creator" || p.job === "Series Creator") ??
+    crew.find((p) => p.job === "Director");
 
   return [
-    { label: "Director", value: director?.name ?? "—" },
-    { label: "Budget", value: formatCurrency(data.budget) },
-    { label: "Revenue", value: formatCurrency(data.revenue) },
+    { label: "Creator", value: creator?.name ?? "—" },
+    {
+      label: "Seasons",
+      value: show.numberOfSeasons ? String(show.numberOfSeasons) : "—",
+    },
+    {
+      label: "Episodes",
+      value: show.numberOfEpisodes ? String(show.numberOfEpisodes) : "—",
+    },
     {
       label: "Country",
-      value: data.production_countries?.map((c) => c.name).join(", ") || "—",
+      value: extended.origin_country?.join(", ").toUpperCase() || "—",
     },
     {
       label: "Language",
-      value:
-        data.spoken_languages?.map((l) => l.english_name).join(", ") ||
-        data.original_language?.toUpperCase() ||
-        "—",
+      value: extended.original_language?.toUpperCase() || "—",
     },
-    { label: "Status", value: data.status || "—" },
+    { label: "Status", value: formatTVStatus(show.status) },
   ];
 }
 
-export async function getMovieVideos(movieId: number): Promise<ContentVideo[]> {
-  const data = await tmdbFetch<TmdbVideosResponse>(`/movie/${movieId}/videos`);
+export async function getTVVideos(tvId: number): Promise<ContentVideo[]> {
+  const data = await tmdbFetch<TmdbVideosResponse>(`/tv/${tvId}/videos`);
 
   return data.results
     .filter((v) => v.site === "YouTube")
@@ -205,16 +195,19 @@ export async function getMovieVideos(movieId: number): Promise<ContentVideo[]> {
     }));
 }
 
-export async function getSimilarMovies(movieId: number, limit = 8): Promise<Movie[]> {
-  const data = await tmdbFetch<TmdbSimilarResponse>(`/movie/${movieId}/similar`);
+export async function getSimilarTVShows(
+  tvId: number,
+  limit = 8,
+): Promise<ContentItem[]> {
+  const data = await tmdbFetch<TmdbSimilarTVResponse>(`/tv/${tvId}/similar`);
 
   return data.results.slice(0, limit).map((item) => {
-    const movie = mapTmdbMovieToMovie(item);
+    const show = mapTmdbTVToContentItem(item);
     return {
-      ...movie,
+      ...show,
       genres:
-        movie.genres.length > 0
-          ? movie.genres.map((g) => ({
+        show.genres.length > 0
+          ? show.genres.map((g) => ({
               id: g.id,
               name: getGenreDisplayName(g.id, g.name),
             }))
@@ -223,8 +216,8 @@ export async function getSimilarMovies(movieId: number, limit = 8): Promise<Movi
   });
 }
 
-export async function getMovieTrailerKey(movieId: number): Promise<string | null> {
-  const data = await tmdbFetch<TmdbVideosResponse>(`/movie/${movieId}/videos`);
+export async function getTVTrailerKey(tvId: number): Promise<string | null> {
+  const data = await tmdbFetch<TmdbVideosResponse>(`/tv/${tvId}/videos`);
 
   const trailer =
     data.results.find(
@@ -234,31 +227,29 @@ export async function getMovieTrailerKey(movieId: number): Promise<string | null
   return trailer?.key ?? null;
 }
 
-export interface MoviePageData {
-  movie: Movie;
+export interface TVPageData {
+  show: ContentItem;
   cast: Person[];
   crew: Person[];
-  similar: Movie[];
+  similar: ContentItem[];
   trailerKey: string | null;
   technicalDetails: TechnicalDetailRow[];
   videos: ContentVideo[];
 }
 
-export async function getMoviePageData(movieId: number): Promise<MoviePageData> {
+export async function getTVPageData(tvId: number): Promise<TVPageData> {
   const [details, availability, cast, crew, similar, trailerKey, videos] =
     await Promise.all([
-      getMovieDetails(movieId),
-      getWatchProviders(movieId),
-      getMovieCast(movieId),
-      getMovieCrew(movieId),
-      getSimilarMovies(movieId, 8),
-      getMovieTrailerKey(movieId),
-      getMovieVideos(movieId),
+      getTVDetails(tvId),
+      getTVWatchProviders(tvId),
+      getTVCast(tvId),
+      getTVCrew(tvId),
+      getSimilarTVShows(tvId, 8),
+      getTVTrailerKey(tvId),
+      getTVVideos(tvId),
     ]);
 
-  const technicalDetails = await getMovieTechnicalDetails(movieId, crew);
-
-  const movie: Movie = {
+  const show: ContentItem = {
     ...details,
     genres: details.genres.map((g) => ({
       id: g.id,
@@ -268,5 +259,16 @@ export async function getMoviePageData(movieId: number): Promise<MoviePageData> 
     credits: { cast, crew },
   };
 
-  return { movie, cast, crew, similar, trailerKey, technicalDetails, videos };
+  const technicalDetails = await getTVTechnicalDetails(tvId, show, crew);
+
+  return { show, cast, crew, similar, trailerKey, technicalDetails, videos };
+}
+
+export function formatTVStatus(status: string | null): string {
+  if (!status) return "—";
+  if (status === "Returning Series") return "Returning";
+  if (status === "Ended") return "Ended";
+  if (status === "Canceled") return "Canceled";
+  if (status === "In Production") return "In Production";
+  return status;
 }

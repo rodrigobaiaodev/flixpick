@@ -1,6 +1,9 @@
 /** Core media type identifiers aligned with TMDB-style APIs */
 export type MediaType = "movie" | "tv";
 
+/** Recommendation / discover scope */
+export type RecommendMediaType = MediaType | "both";
+
 export type ContentRating =
   | "G"
   | "PG"
@@ -24,6 +27,12 @@ export interface Person {
   profilePath: string | null;
   character?: string;
   job?: string;
+}
+
+export interface Network {
+  id: number;
+  name: string;
+  logoPath: string | null;
 }
 
 export interface MovieCredits {
@@ -76,7 +85,8 @@ export interface Mood {
   gradientTo: string;
 }
 
-export interface Movie {
+/** Unified content model for movies and TV shows */
+export interface ContentItem {
   id: number;
   tmdbId: number;
   mediaType: MediaType;
@@ -84,6 +94,7 @@ export interface Movie {
   originalTitle: string;
   overview: string;
   tagline: string | null;
+  /** release_date for movies, first_air_date for TV */
   releaseDate: string;
   runtimeMinutes: number | null;
   posterPath: string | null;
@@ -99,10 +110,18 @@ export interface Movie {
   /** User-specific fields */
   inWatchlist?: boolean;
   userRating?: number | null;
+  /** TV show fields (null for movies) */
+  numberOfSeasons: number | null;
+  numberOfEpisodes: number | null;
+  status: string | null;
+  networks: Network[];
 }
 
+/** @deprecated Use ContentItem — kept for backward compatibility */
+export type Movie = ContentItem;
+
 export interface MovieRecommendation {
-  movie: Movie;
+  movie: ContentItem;
   score: number;
   reason: string;
   matchedMoods: Mood["id"][];
@@ -113,7 +132,7 @@ export interface MovieSearchFilters {
   query?: string;
   genres?: number[];
   moods?: string[];
-  mediaType?: MediaType;
+  mediaType?: MediaType | "both";
   minRating?: number;
   yearFrom?: number;
   yearTo?: number;
@@ -125,7 +144,7 @@ export interface MovieSearchFilters {
 }
 
 export interface MovieSearchResult {
-  results: Movie[];
+  results: ContentItem[];
   page: number;
   totalPages: number;
   totalResults: number;

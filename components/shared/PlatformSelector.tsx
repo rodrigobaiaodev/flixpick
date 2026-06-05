@@ -1,120 +1,44 @@
 "use client";
 
-import Image from "next/image";
+import { useEffect, useState } from "react";
+import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
+import {
+  STREAMING_PLATFORMS,
+  type StreamingPlatform,
+} from "@/lib/streaming-platforms";
 import { cn } from "@/lib/utils";
 
-export interface StreamingPlatform {
-  id: string;
-  name: string;
-  shortLabel: string;
-  brandColor: string;
-  /** TMDB provider ID when available */
-  tmdbProviderId?: number;
-  logoUrl?: string;
-  iconBackground: string;
-  /** Peacock has no reliable CDN icon — render styled letter */
-  useLetterIcon?: boolean;
-}
+export type { StreamingPlatform };
+export { STREAMING_PLATFORMS };
 
-export const STREAMING_PLATFORMS: StreamingPlatform[] = [
-  {
-    id: "netflix",
-    name: "Netflix",
-    shortLabel: "N",
-    brandColor: "#e50914",
-    tmdbProviderId: 8,
-    logoUrl: "https://cdn.simpleicons.org/netflix/ffffff",
-    iconBackground: "#e50914",
-  },
-  {
-    id: "prime",
-    name: "Prime Video",
-    shortLabel: "PV",
-    brandColor: "#00a8e1",
-    tmdbProviderId: 9,
-    logoUrl: "https://cdn.simpleicons.org/primevideo/ffffff",
-    iconBackground: "#00a8e1",
-  },
-  {
-    id: "max",
-    name: "Max",
-    shortLabel: "Max",
-    brandColor: "#002be7",
-    tmdbProviderId: 1899,
-    logoUrl: "https://cdn.simpleicons.org/max/ffffff",
-    iconBackground: "#002be7",
-  },
-  {
-    id: "disney",
-    name: "Disney+",
-    shortLabel: "D+",
-    brandColor: "#113ccf",
-    tmdbProviderId: 337,
-    logoUrl: "https://cdn.simpleicons.org/disneyplus/ffffff",
-    iconBackground: "#113ccf",
-  },
-  {
-    id: "apple",
-    name: "Apple TV+",
-    shortLabel: "ATV",
-    brandColor: "#000000",
-    tmdbProviderId: 350,
-    logoUrl: "https://cdn.simpleicons.org/appletv/ffffff",
-    iconBackground: "#000000",
-  },
-  {
-    id: "hulu",
-    name: "Hulu",
-    shortLabel: "Hulu",
-    brandColor: "#1ce783",
-    tmdbProviderId: 15,
-    logoUrl: "https://cdn.simpleicons.org/hulu/000000",
-    iconBackground: "#1ce783",
-  },
-  {
-    id: "peacock",
-    name: "Peacock",
-    shortLabel: "P",
-    brandColor: "#0056ff",
-    tmdbProviderId: 386,
-    iconBackground: "#0056ff",
-    useLetterIcon: true,
-  },
-  {
-    id: "paramount",
-    name: "Paramount+",
-    shortLabel: "P+",
-    brandColor: "#0064ff",
-    tmdbProviderId: 531,
-    logoUrl: "https://cdn.simpleicons.org/paramount/ffffff",
-    iconBackground: "#0064ff",
-  },
-];
+function PlatformLogo({
+  platform,
+  size = 32,
+}: {
+  platform: StreamingPlatform;
+  size?: number;
+}) {
+  if (platform.logoUrl) {
+    return (
+      <TmdbProviderLogo
+        logoUrl={platform.logoUrl}
+        name={platform.name}
+        size={size}
+      />
+    );
+  }
 
-function PlatformLogo({ platform }: { platform: StreamingPlatform }) {
   return (
     <span
-      className="flex size-8 shrink-0 items-center justify-center rounded-full"
-      style={{ backgroundColor: platform.iconBackground }}
+      className="flex shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: platform.iconBackground,
+      }}
+      aria-hidden
     >
-      {platform.useLetterIcon ? (
-        <span
-          className="font-[family-name:var(--font-display)] text-lg leading-none text-white"
-          aria-hidden
-        >
-          P
-        </span>
-      ) : (
-        platform.logoUrl && (
-          <Image
-            src={platform.logoUrl}
-            alt=""
-            width={20}
-            height={20}
-            className="size-5 object-contain"
-          />
-        )
-      )}
+      {platform.shortLabel}
     </span>
   );
 }
@@ -129,9 +53,42 @@ export interface PlatformSelectorProps {
 export function PlatformSelector({
   selectedPlatformIds,
   onSelectionChange,
-  platforms = STREAMING_PLATFORMS,
+  platforms: platformsProp,
   className,
 }: PlatformSelectorProps) {
+  const [platforms, setPlatforms] = useState<StreamingPlatform[]>(
+    platformsProp ?? STREAMING_PLATFORMS,
+  );
+
+  useEffect(() => {
+    if (platformsProp) {
+      setPlatforms(platformsProp);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadLogos() {
+      try {
+        const response = await fetch("/api/providers");
+        if (!response.ok) return;
+        const data = (await response.json()) as {
+          platforms?: StreamingPlatform[];
+        };
+        if (!cancelled && data.platforms?.length) {
+          setPlatforms(data.platforms);
+        }
+      } catch {
+        /* keep defaults */
+      }
+    }
+
+    void loadLogos();
+    return () => {
+      cancelled = true;
+    };
+  }, [platformsProp]);
+
   const allPlatformIds = platforms.map((p) => p.id);
   const isAllSelected =
     allPlatformIds.length > 0 &&
@@ -182,6 +139,7 @@ export function PlatformSelector({
               role="checkbox"
               aria-checked={isSelected}
               aria-label={platform.name}
+              title={platform.name}
               onClick={() => togglePlatform(platform.id)}
               className={cn(
                 "flex items-center gap-2.5 rounded-full border border-white/10 bg-[#0a0a0f]/80 px-3 py-2 text-sm font-medium transition-all duration-200",

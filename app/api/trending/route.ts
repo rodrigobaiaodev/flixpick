@@ -1,23 +1,30 @@
 import { NextResponse } from "next/server";
-import { getTrendingMovies, getWatchProviders } from "@/lib/tmdb";
-import type { Movie } from "@/types/movie";
+import {
+  getTrendingAll,
+  getTVWatchProviders,
+  getWatchProviders,
+} from "@/lib/tmdb";
+import type { ContentItem } from "@/types/movie";
 
 export const revalidate = 3600;
 
 export async function GET() {
   try {
-    const trending = await getTrendingMovies("day");
+    const trending = await getTrendingAll("day");
 
-    const moviesWithWatch: Movie[] = await Promise.all(
-      trending.results.map(async (movie) => {
-        const availability = await getWatchProviders(movie.id);
-        return { ...movie, availability };
+    const itemsWithWatch: ContentItem[] = await Promise.all(
+      trending.results.map(async (item) => {
+        const availability =
+          item.mediaType === "tv"
+            ? await getTVWatchProviders(item.id)
+            : await getWatchProviders(item.id);
+        return { ...item, availability };
       }),
     );
 
     return NextResponse.json(
       {
-        movies: moviesWithWatch,
+        movies: itemsWithWatch,
         page: trending.page,
         totalResults: trending.totalResults,
       },

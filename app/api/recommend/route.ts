@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { isValidMoodSlug } from "@/lib/providers-moods";
 import {
-  buildFullMoviePick,
-  fetchMoodCandidates,
+  buildFullContentPick,
+  fetchRecommendCandidates,
 } from "@/lib/tmdb";
-import type { Movie } from "@/types/movie";
+import type { ContentItem, RecommendMediaType } from "@/types/movie";
 
 export const revalidate = 300;
 
@@ -13,10 +13,11 @@ interface RecommendRequestBody {
   providers: number[];
   minRating?: number;
   excludeIds?: number[];
+  mediaType?: RecommendMediaType;
 }
 
 interface RecommendResponseBody {
-  movie: Movie;
+  movie: ContentItem;
   trailerUrl: string | null;
 }
 
@@ -25,11 +26,14 @@ function pickRandom<T>(items: T[]): T | null {
   return items[Math.floor(Math.random() * items.length)] ?? null;
 }
 
+const VALID_MEDIA_TYPES: RecommendMediaType[] = ["movie", "tv", "both"];
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as RecommendRequestBody;
     const { mood, providers, excludeIds = [] } = body;
     const minRating = body.minRating ?? 7.0;
+    const mediaType: RecommendMediaType = body.mediaType ?? "both";
 
     if (!mood || typeof mood !== "string") {
       return NextResponse.json(
@@ -45,6 +49,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!VALID_MEDIA_TYPES.includes(mediaType)) {
+      return NextResponse.json(
+        { error: "mediaType must be 'movie', 'tv', or 'both'" },
+        { status: 400 },
+      );
+    }
+
     if (!Array.isArray(providers)) {
       return NextResponse.json(
         { error: "providers must be an array of TMDB provider IDs" },
@@ -56,19 +67,23 @@ export async function POST(request: Request) {
       (id): id is number => typeof id === "number" && id > 0,
     );
 
-    const candidates = await fetchMoodCandidates(mood, providerIds, 40);
+    const candidates = await fetchRecommendCandidates(
+      mood,
+      providerIds,
+      mediaType,
+    );
 
     const excludeSet = new Set(excludeIds);
     const filtered = candidates.filter(
-      (movie) =>
-        movie.voteAverage >= minRating && !excludeSet.has(movie.id),
+      (item) =>
+        item.voteAverage >= minRating && !excludeSet.has(item.id),
     );
 
     if (filtered.length === 0) {
       return NextResponse.json(
         {
           error:
-            "No movies matched your filters. Try different providers, a lower minRating, or fewer exclusions.",
+            "No titles matched your filters. Try different platforms, a lower minRating, or fewer exclusions.",
         },
         { status: 404 },
       );
@@ -82,7 +97,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const { movie, trailerUrl } = await buildFullMoviePick(picked.id, mood);
+    const { movie, trailerUrl } = await buildFullContentPick(
+      picked.id,
+      picked.mediaType,
+      mood,
+    );
 
     const payload: RecommendResponseBody = { movie, trailerUrl };
 

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getMoviePageData } from "@/lib/movie-detail";
-import { movieSlug } from "@/components/shared/MovieCard";
+import { movieSlug } from "@/lib/genres";
+import { parseContentId, parseSlugFromIdParam } from "@/lib/route-params";
 import { MovieDetailContent } from "./MovieDetailContent";
 
 interface MoviePageProps {
@@ -12,9 +13,10 @@ export async function generateMetadata({
   params,
 }: MoviePageProps): Promise<Metadata> {
   const { id } = await params;
-  const movieId = Number(id);
+  console.log("[movie/[id]/[slug]/generateMetadata] params:", { id });
+  const movieId = parseContentId(id);
 
-  if (Number.isNaN(movieId)) {
+  if (!movieId) {
     return { title: "Movie Not Found | FlixPick" };
   }
 
@@ -38,9 +40,10 @@ export async function generateMetadata({
 
 export default async function MoviePage({ params }: MoviePageProps) {
   const { id, slug } = await params;
-  const movieId = Number(id);
+  console.log("[movie/[id]/[slug]/page] params:", { id, slug });
 
-  if (Number.isNaN(movieId)) {
+  const movieId = parseContentId(id);
+  if (!movieId) {
     notFound();
   }
 
@@ -52,8 +55,11 @@ export default async function MoviePage({ params }: MoviePageProps) {
   }
 
   const expectedSlug = movieSlug(data.movie.title);
-  if (slug !== expectedSlug) {
-    notFound();
+  const slugFromId = parseSlugFromIdParam(id);
+  const resolvedSlug = slug || slugFromId || expectedSlug;
+
+  if (resolvedSlug !== expectedSlug) {
+    redirect(`/movie/${movieId}/${expectedSlug}`);
   }
 
   const jsonLd = {
@@ -87,8 +93,11 @@ export default async function MoviePage({ params }: MoviePageProps) {
       <MovieDetailContent
         movie={data.movie}
         cast={data.cast}
+        crew={data.crew}
         similar={data.similar}
         trailerKey={data.trailerKey}
+        technicalDetails={data.technicalDetails}
+        videos={data.videos}
       />
     </>
   );

@@ -8,19 +8,26 @@ import {
   type ReactNode,
 } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, Play, Star } from "lucide-react";
 import { AdBanner } from "@/components/shared/AdBanner";
 import { FLIXPICK_MOODS } from "@/components/shared/MoodButton";
 import {
   getGenreDisplayName,
+  movieSlug,
   MovieCard,
   MovieCardSkeleton,
 } from "@/components/shared/MovieCard";
-import { STREAMING_PLATFORMS } from "@/components/shared/PlatformSelector";
+import {
+  STREAMING_PLATFORMS,
+  type StreamingPlatform,
+} from "@/lib/streaming-platforms";
+import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
 import { RouletteWheel } from "@/components/shared/RouletteWheel";
+import { TrailerModal } from "@/components/shared/TrailerModal";
 import { TMDB_PROVIDER_IDS } from "@/lib/providers-moods";
 import { cn } from "@/lib/utils";
-import type { Movie } from "@/types/movie";
+import type { ContentItem, RecommendMediaType } from "@/types/movie";
 
 const AD_CLIENT = "ca-pub-XXXXXXXX";
 
@@ -44,21 +51,31 @@ const PLATFORM_SLUG_TO_TMDB_ID: Record<string, number> = {
 };
 
 interface RecommendResponse {
-  movie: Movie;
+  movie: ContentItem;
   trailerUrl: string | null;
 }
 
 interface TrendingResponse {
-  movies: Movie[];
+  movies: ContentItem[];
   page: number;
   totalResults: number;
 }
 
 interface StoredLastPick {
-  movie: Movie;
+  movie: ContentItem;
   trailerUrl: string | null;
   savedAt: string;
 }
+
+const MEDIA_TYPE_OPTIONS: {
+  value: RecommendMediaType;
+  label: string;
+  icon: string;
+}[] = [
+  { value: "movie", label: "Movies", icon: "🎬" },
+  { value: "tv", label: "TV Shows", icon: "📺" },
+  { value: "both", label: "Both", icon: "🎯" },
+];
 
 function readJson<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
@@ -101,17 +118,21 @@ function tmdbImageUrl(
   return `https://image.tmdb.org/t/p/${size}${path}`;
 }
 
-function getPrimaryWatchLink(movie: Movie): string | null {
-  for (const region of movie.availability) {
-    const option =
-      region.options.find((o) => o.type === "flatrate") ?? region.options[0];
-    if (option?.link) return option.link;
-  }
-  return null;
-}
-
 function getReleaseYear(releaseDate: string): string {
   return releaseDate?.slice(0, 4) || "—";
+}
+
+function youtubeKeyFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes("youtu.be")) {
+      return parsed.pathname.slice(1) || null;
+    }
+    return parsed.searchParams.get("v");
+  } catch {
+    const match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match?.[1] ?? null;
+  }
 }
 
 function SectionReveal({
@@ -165,13 +186,18 @@ export default function HomePage() {
   const [selectedPlatformIds, setSelectedPlatformIds] = useState<string[]>([]);
   const [excludeIds, setExcludeIds] = useState<number[]>([]);
 
-  const [pickResult, setPickResult] = useState<Movie | null>(null);
+  const [pickResult, setPickResult] = useState<ContentItem | null>(null);
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null);
+  const [trailerOpen, setTrailerOpen] = useState(false);
+  const [selectedMediaType, setSelectedMediaType] =
+    useState<RecommendMediaType>("both");
 
   const [recommendLoading, setRecommendLoading] = useState(false);
   const [recommendError, setRecommendError] = useState<string | null>(null);
 
-  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
+  const [streamingPlatforms, setStreamingPlatforms] =
+    useState<StreamingPlatform[]>(STREAMING_PLATFORMS);
+  const [trendingMovies, setTrendingMovies] = useState<ContentItem[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(true);
   const [trendingError, setTrendingError] = useState<string | null>(null);
   const [trendingScroll, setTrendingScroll] = useState({
@@ -226,6 +252,30 @@ export default function HomePage() {
     };
     writeJson(STORAGE_KEYS.lastPick, payload);
   }, [pickResult, trailerUrl, hydrated]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProviderLogos() {
+      try {
+        const response = await fetch("/api/providers");
+        if (!response.ok) return;
+        const data = (await response.json()) as {
+          platforms?: StreamingPlatform[];
+        };
+        if (!cancelled && data.platforms?.length) {
+          setStreamingPlatforms(data.platforms);
+        }
+      } catch {
+        /* keep defaults */
+      }
+    }
+
+    void loadProviderLogos();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -307,6 +357,7 @@ export default function HomePage() {
           providers: resolveProviderIds(selectedPlatformIds),
           minRating: 7.0,
           excludeIds: excludeIdsForRequest,
+          mediaType: selectedMediaType,
         }),
       });
 
@@ -338,7 +389,7 @@ export default function HomePage() {
       setRecommendLoading(false);
     }
   },
-    [selectedMoodId, selectedPlatformIds, excludeIds],
+    [selectedMoodId, selectedPlatformIds, excludeIds, selectedMediaType],
   );
 
   const handleRollAgain = useCallback(() => {
@@ -394,7 +445,7 @@ export default function HomePage() {
     };
   }, [trendingMovies, trendingLoading, updateTrendingScrollState]);
 
-  const allPlatformIds = STREAMING_PLATFORMS.map((p) => p.id);
+  const allPlatformIds = streamingPlatforms.map((p) => p.id);
   const isAllPlatformsSelected =
     allPlatformIds.length > 0 &&
     allPlatformIds.every((id) => selectedPlatformIds.includes(id));
@@ -414,7 +465,9 @@ export default function HomePage() {
   };
 
   const selectedMoodIds = selectedMoodId ? [selectedMoodId] : [];
-  const watchLink = pickResult ? getPrimaryWatchLink(pickResult) : null;
+  const pickDetailHref = pickResult
+    ? `/${pickResult.mediaType === "tv" ? "tv" : "movie"}/${pickResult.id}/${movieSlug(pickResult.title)}`
+    : null;
   const posterUrl = pickResult ? tmdbImageUrl(pickResult.posterPath, "w500") : null;
   const backdropUrl = pickResult
     ? tmdbImageUrl(pickResult.backdropPath, "original")
@@ -608,25 +661,22 @@ export default function HomePage() {
 
                   <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start">
                     {trailerUrl && (
-                      <a
-                        href={trailerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => setTrailerOpen(true)}
                         className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-white px-6 text-sm font-semibold text-[#0a0a0f] transition hover:bg-slate-200"
                       >
                         <Play className="size-4 fill-current" />
                         Watch Trailer
-                      </a>
+                      </button>
                     )}
-                    {watchLink && (
-                      <a
-                        href={watchLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    {pickDetailHref && (
+                      <Link
+                        href={pickDetailHref}
                         className="inline-flex h-12 items-center justify-center rounded-lg bg-[#e50914] px-6 text-sm font-semibold text-white transition hover:bg-[#f6121d]"
                       >
-                        Where to Watch
-                      </a>
+                        View Full Details
+                      </Link>
                     )}
                     <button
                       type="button"
@@ -661,6 +711,39 @@ export default function HomePage() {
           {/* Picker + wheel (above the fold) */}
           {!pickResult && (
             <div className="mt-8 flex flex-1 flex-col items-center justify-center gap-6 sm:gap-8">
+              {/* Media type toggle */}
+              <div className="w-full max-w-md">
+                <p className="mb-3 text-center text-xs font-medium uppercase tracking-widest text-slate-500">
+                  What are you in the mood for?
+                </p>
+                <div
+                  className="flex justify-center gap-2"
+                  role="group"
+                  aria-label="Select media type"
+                >
+                  {MEDIA_TYPE_OPTIONS.map((option) => {
+                    const selected = selectedMediaType === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setSelectedMediaType(option.value)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300",
+                          selected
+                            ? "border-[#e50914] bg-[#e50914]/15 text-white shadow-[0_0_20px_rgba(229,9,20,0.25)]"
+                            : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.08] hover:text-white",
+                        )}
+                      >
+                        <span aria-hidden>{option.icon}</span>
+                        <span>{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Mood pills */}
               <div
                 id="mood-selection"
@@ -727,7 +810,7 @@ export default function HomePage() {
                   role="group"
                   aria-label="Streaming platforms"
                 >
-                  {STREAMING_PLATFORMS.map((platform) => {
+                  {streamingPlatforms.map((platform) => {
                     const selected = selectedPlatformIds.includes(platform.id);
                     return (
                       <button
@@ -739,18 +822,16 @@ export default function HomePage() {
                         title={platform.name}
                         onClick={() => togglePlatform(platform.id)}
                         className={cn(
-                          "flex size-10 items-center justify-center rounded-full border text-[10px] font-bold transition-all sm:size-11",
-                          selected
-                            ? "scale-110 border-transparent text-white shadow-lg"
-                            : "border-white/15 bg-white/[0.04] text-white hover:border-white/25",
+                          "transition-all",
+                          selected ? "scale-110" : "opacity-70 hover:opacity-100",
                         )}
-                        style={
-                          selected
-                            ? { backgroundColor: platform.brandColor }
-                            : { backgroundColor: `${platform.brandColor}99` }
-                        }
                       >
-                        {platform.shortLabel}
+                        <TmdbProviderLogo
+                          logoUrl={platform.logoUrl}
+                          name={platform.name}
+                          size={44}
+                          selected={selected}
+                        />
                       </button>
                     );
                   })}
@@ -900,6 +981,13 @@ export default function HomePage() {
           className="mx-auto max-w-4xl"
         />
       </SectionReveal>
+
+      <TrailerModal
+        open={trailerOpen}
+        onClose={() => setTrailerOpen(false)}
+        youtubeKey={trailerUrl ? youtubeKeyFromUrl(trailerUrl) : null}
+        title={pickResult?.title}
+      />
     </div>
   );
 }

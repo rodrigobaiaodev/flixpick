@@ -2,6 +2,8 @@ import Link from "next/link";
 
 const navLinks = [
   { href: "/", label: "Home" },
+  { href: "/browse/movies", label: "Movies" },
+  { href: "/browse/tv", label: "TV Shows" },
   { href: "/browse", label: "Browse" },
   { href: "/my-list", label: "My List" },
 ] as const;
@@ -23,7 +25,7 @@ export function Header() {
               <li key={href}>
                 <Link
                   href={href}
-                  className="rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-100 sm:px-4 sm:text-base"
+                  className="rounded-md px-2 py-2 text-xs font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-100 sm:px-3 sm:text-sm lg:px-4 lg:text-base"
                 >
                   {label}
                 </Link>
