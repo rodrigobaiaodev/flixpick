@@ -224,7 +224,7 @@ export function WatchStatusButton({
       {open && user && (isOnList || currentStatus) && (
         <div
           className={cn(
-            "absolute z-30 mt-2 min-w-[220px] overflow-hidden rounded-xl border border-white/15 bg-[#12121a] py-1 shadow-2xl shadow-black/50",
+            "absolute z-[100] mt-2 min-w-[220px] overflow-hidden rounded-xl border border-white/15 bg-[#12121a] py-1 shadow-2xl shadow-black/50",
             variant === "compact" ? "right-0" : "left-0",
           )}
         >

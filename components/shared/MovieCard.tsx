@@ -145,7 +145,7 @@ export function MovieCard(props: MovieCardComponentProps) {
   return (
     <article
       className={cn(
-        "group flex w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#12121a] shadow-lg",
+        "group flex w-full flex-col overflow-visible rounded-2xl border border-white/10 bg-[#12121a] shadow-lg",
         "transition-all duration-300 hover:border-white/20 hover:shadow-xl hover:shadow-black/40",
         className,
       )}

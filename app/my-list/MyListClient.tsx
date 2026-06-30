@@ -205,10 +205,10 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
               return (
                 <article
                   key={item.id}
-                  className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#12121a] transition hover:border-white/20 hover:shadow-xl hover:shadow-black/40"
+                  className="group relative overflow-visible rounded-2xl border border-white/10 bg-[#12121a] transition hover:border-white/20 hover:shadow-xl hover:shadow-black/40"
                 >
-                  <Link href={detailHref} className="block">
-                    <div className="relative aspect-[2/3] bg-white/5">
+                  <Link href={detailHref} className="block overflow-hidden rounded-t-2xl">
+                    <div className="relative aspect-[2/3] overflow-hidden bg-white/5">
                       {posterUrl ? (
                         <Image
                           src={posterUrl}
@@ -249,7 +249,7 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
                     )}
                   </Link>
                   <div
-                    className="border-t border-white/10 p-2"
+                    className="relative z-20 border-t border-white/10 p-2"
                     onClick={(e) => e.preventDefault()}
                   >
                     <WatchStatusButton

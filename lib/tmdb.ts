@@ -570,6 +570,66 @@ export async function searchMovies(query: string): Promise<MovieSearchResult> {
   };
 }
 
+export async function searchMulti(
+  query: string,
+  page = 1,
+): Promise<MovieSearchResult> {
+  const data = await tmdbFetch<TmdbPaginatedResponse<TmdbTrendingAllItem>>(
+    "/search/multi",
+    {
+      query,
+      include_adult: false,
+      page,
+      watch_region: WATCH_REGION,
+    },
+    { next: { revalidate: 300 } },
+  );
+
+  const results = data.results
+    .map(mapTrendingAllItem)
+    .filter((item): item is ContentItem => item !== null);
+
+  return {
+    results,
+    page: data.page,
+    totalPages: data.total_pages,
+    totalResults: data.total_results,
+  };
+}
+
+export async function enrichContentWithAvailability(
+  items: ContentItem[],
+): Promise<ContentItem[]> {
+  return Promise.all(
+    items.map(async (item) => {
+      try {
+        const availability =
+          item.mediaType === "tv"
+            ? await getTVWatchProviders(item.id)
+            : await getWatchProviders(item.id);
+        return { ...item, availability };
+      } catch {
+        return item;
+      }
+    }),
+  );
+}
+
+export function contentMatchesProviders(
+  item: ContentItem,
+  providerIds: number[],
+): boolean {
+  if (providerIds.length === 0) return true;
+
+  return item.availability.some((region) =>
+    region.options.some(
+      (option) =>
+        option.type === "flatrate" &&
+        providerIds.includes(option.provider.id),
+    ),
+  );
+}
+
 async function getTrailerUrl(
   mediaType: MediaType,
   id: number,

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, ChevronDown, LogOut } from "lucide-react";
+import { Menu, Search, X, ChevronDown, LogOut } from "lucide-react";
 import { useAuth } from "@/components/shared/AuthProvider";
+import { HeaderSearch } from "@/components/shared/HeaderSearch";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -95,6 +96,8 @@ export function Header() {
 
         {/* Auth section */}
         <div className="flex items-center gap-2">
+          <HeaderSearch />
+
           {!loading && !user && (
             <Link
               href="/auth/login"
@@ -202,6 +205,16 @@ export function Header() {
         )}
       >
         <ul className="flex flex-col px-4 py-3">
+          <li>
+            <Link
+              href="/search"
+              onClick={() => setMobileOpen(false)}
+              className="flex min-h-[44px] items-center gap-2 rounded-lg px-3 text-base font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+            >
+              <Search className="size-4" />
+              Search
+            </Link>
+          </li>
           {navLinks.map(({ href, label }) => (
             <li key={href}>
               <Link

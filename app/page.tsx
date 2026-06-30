@@ -1055,7 +1055,7 @@ export default function HomePage() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <MovieCardSkeleton
                     key={`trending-skeleton-${i}`}
-                    className="w-[min(75vw,200px)] shrink-0 snap-start sm:w-[200px]"
+                    className="w-[140px] shrink-0 snap-start sm:w-[180px] md:w-[200px]"
                   />
                 ))}
 
@@ -1065,7 +1065,7 @@ export default function HomePage() {
                     key={movie.id}
                     movie={movie}
                     showAvailability
-                    className="w-[min(75vw,200px)] shrink-0 snap-start sm:w-[200px]"
+                    className="w-[140px] shrink-0 snap-start sm:w-[180px] md:w-[200px]"
                   />
                 ))}
 
@@ -1102,10 +1102,13 @@ export default function HomePage() {
             </p>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:grid md:grid-cols-3 md:overflow-visible md:pb-0 lg:grid-cols-3 xl:grid-cols-6 [&::-webkit-scrollbar]:hidden">
             {featuredLoading &&
               Array.from({ length: 6 }).map((_, i) => (
-                <MovieCardSkeleton key={`featured-skeleton-${i}`} />
+                <MovieCardSkeleton
+                  key={`featured-skeleton-${i}`}
+                  className="w-[140px] shrink-0 snap-start sm:w-[180px] md:w-full md:shrink md:snap-align-none"
+                />
               ))}
 
             {!featuredLoading &&
@@ -1115,6 +1118,7 @@ export default function HomePage() {
                   movie={movie}
                   showAvailability
                   priority={index < 3}
+                  className="w-[140px] shrink-0 snap-start sm:w-[180px] md:w-full md:shrink md:snap-align-none"
                 />
               ))}
           </div>
