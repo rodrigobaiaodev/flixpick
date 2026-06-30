@@ -9,6 +9,9 @@ export interface StreamingPlatform {
   iconBackground: string;
   /** Fallback when TMDB logo is unavailable */
   useLetterIcon?: boolean;
+  /** Custom fallback text rendered on iconBackground when no TMDB logo */
+  fallbackLabel?: string;
+  fallbackBackground?: string;
 }
 
 export const STREAMING_PLATFORMS: StreamingPlatform[] = [
@@ -31,10 +34,13 @@ export const STREAMING_PLATFORMS: StreamingPlatform[] = [
   {
     id: "max",
     name: "Max",
-    shortLabel: "Max",
+    shortLabel: "max",
     brandColor: "#002be7",
     tmdbProviderId: 384,
     iconBackground: "#002be7",
+    fallbackLabel: "max",
+    fallbackBackground: "#002be7",
+    useLetterIcon: true,
   },
   {
     id: "disney",
@@ -76,5 +82,8 @@ export const STREAMING_PLATFORMS: StreamingPlatform[] = [
     brandColor: "#0064ff",
     tmdbProviderId: 531,
     iconBackground: "#0064ff",
+    fallbackLabel: "P+",
+    fallbackBackground: "#0064ff",
+    useLetterIcon: true,
   },
 ];

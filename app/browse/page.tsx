@@ -44,6 +44,9 @@ export default async function BrowsePage() {
                 <TmdbProviderLogo
                   logoUrl={platform.logoUrl}
                   name={platform.name}
+                  tmdbProviderId={platform.tmdbProviderId}
+                  fallbackLabel={platform.fallbackLabel}
+                  fallbackBackground={platform.fallbackBackground}
                   size={64}
                 />
                 <span className="text-center text-sm font-semibold text-white group-hover:text-[#e50914]">
@@ -74,7 +77,7 @@ export default async function BrowsePage() {
               </Link>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {trendingItems.map((item, index) => (
               <MovieCard
                 key={`${item.mediaType}-${item.id}`}

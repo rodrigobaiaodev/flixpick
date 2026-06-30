@@ -3,13 +3,14 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Play, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Play, Star } from "lucide-react";
 import { AdBanner } from "@/components/shared/AdBanner";
 import { FLIXPICK_MOODS } from "@/components/shared/MoodButton";
 import {
@@ -26,6 +27,7 @@ import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
 import { RouletteWheel } from "@/components/shared/RouletteWheel";
 import { TrailerModal } from "@/components/shared/TrailerModal";
 import { TMDB_PROVIDER_IDS } from "@/lib/providers-moods";
+import { getWhereToWatchUrlForMovie } from "@/lib/watch-links";
 import { cn } from "@/lib/utils";
 import type { ContentItem, RecommendMediaType } from "@/types/movie";
 
@@ -59,6 +61,10 @@ interface TrendingResponse {
   movies: ContentItem[];
   page: number;
   totalResults: number;
+}
+
+interface FeaturedResponse {
+  movies: ContentItem[];
 }
 
 interface StoredLastPick {
@@ -111,7 +117,7 @@ function resolveProviderIds(selectedPlatformSlugs: string[]): number[] {
 
 function tmdbImageUrl(
   path: string | null,
-  size: "w500" | "original" = "w500",
+  size: "w500" | "w1280" | "original" = "w500",
 ): string | null {
   if (!path) return null;
   if (path.startsWith("http")) return path;
@@ -204,6 +210,21 @@ export default function HomePage() {
     canScrollLeft: false,
     canScrollRight: false,
   });
+
+  const [featuredMovies, setFeaturedMovies] = useState<ContentItem[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
+
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  const [pickWatchHref, setPickWatchHref] = useState<string | null>(null);
+
+  const heroBackdrops = useMemo(
+    () =>
+      trendingMovies
+        .map((m) => tmdbImageUrl(m.backdropPath, "original"))
+        .filter((url): url is string => Boolean(url)),
+    [trendingMovies],
+  );
 
   useEffect(() => {
     const savedMood = readJson<string>(STORAGE_KEYS.mood);
@@ -312,6 +333,92 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFeatured() {
+      setFeaturedLoading(true);
+      setFeaturedError(null);
+      try {
+        const response = await fetch("/api/featured");
+        if (!response.ok) {
+          const body = (await response.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          throw new Error(body.error ?? "Failed to load editor's picks");
+        }
+        const data = (await response.json()) as FeaturedResponse;
+        if (!cancelled) {
+          setFeaturedMovies(data.movies ?? []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setFeaturedError(
+            error instanceof Error ? error.message : "Something went wrong",
+          );
+        }
+      } finally {
+        if (!cancelled) setFeaturedLoading(false);
+      }
+    }
+
+    void loadFeatured();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (heroBackdrops.length <= 1) return;
+    const timer = setInterval(() => {
+      setHeroSlideIndex((i) => (i + 1) % heroBackdrops.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [heroBackdrops.length]);
+
+  useEffect(() => {
+    if (!pickResult) {
+      setPickWatchHref(null);
+      return;
+    }
+
+    const movie = pickResult;
+    const localUrl = getWhereToWatchUrlForMovie(movie);
+    const hasProviders = movie.availability.some((region) =>
+      region.options.some((o) => o.type === "flatrate"),
+    );
+
+    if (hasProviders) {
+      setPickWatchHref(localUrl);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchWatchUrl() {
+      try {
+        const params = new URLSearchParams({
+          id: String(movie.id),
+          title: movie.title,
+          mediaType: movie.mediaType,
+        });
+        const response = await fetch(`/api/watch-url?${params.toString()}`);
+        if (!response.ok) return;
+        const data = (await response.json()) as { url?: string };
+        if (!cancelled) {
+          setPickWatchHref(data.url ?? localUrl);
+        }
+      } catch {
+        if (!cancelled) setPickWatchHref(localUrl);
+      }
+    }
+
+    void fetchWatchUrl();
+    return () => {
+      cancelled = true;
+    };
+  }, [pickResult]);
+
   const handleMoodSelect = useCallback((moodId: string) => {
     setSelectedMoodId(moodId);
     setRecommendError(null);
@@ -326,69 +433,69 @@ export default function HomePage() {
 
   const handleSpin = useCallback(
     async (additionalExcludeId?: number) => {
-    if (!selectedMoodId) {
-      setRecommendError("Pick a mood first to spin the wheel.");
-      return;
-    }
-
-    const excludeIdsForRequest =
-      additionalExcludeId !== undefined
-        ? excludeIds.includes(additionalExcludeId)
-          ? excludeIds
-          : [...excludeIds, additionalExcludeId]
-        : excludeIds;
-
-    if (
-      additionalExcludeId !== undefined &&
-      !excludeIds.includes(additionalExcludeId)
-    ) {
-      setExcludeIds(excludeIdsForRequest);
-    }
-
-    setRecommendLoading(true);
-    setRecommendError(null);
-
-    try {
-      const response = await fetch("/api/recommend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mood: selectedMoodId,
-          providers: resolveProviderIds(selectedPlatformIds),
-          minRating: 7.0,
-          excludeIds: excludeIdsForRequest,
-          mediaType: selectedMediaType,
-        }),
-      });
-
-      const data = (await response.json()) as RecommendResponse & {
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(data.error ?? "Could not find a recommendation");
+      if (!selectedMoodId) {
+        setRecommendError("Pick a mood first to spin the wheel.");
+        return;
       }
 
-      setPickResult(data.movie);
-      setTrailerUrl(data.trailerUrl ?? null);
-      setExcludeIds((prev) =>
-        prev.includes(data.movie.id) ? prev : [...prev, data.movie.id],
-      );
+      const excludeIdsForRequest =
+        additionalExcludeId !== undefined
+          ? excludeIds.includes(additionalExcludeId)
+            ? excludeIds
+            : [...excludeIds, additionalExcludeId]
+          : excludeIds;
 
-      requestAnimationFrame(() => {
-        rouletteSectionRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
+      if (
+        additionalExcludeId !== undefined &&
+        !excludeIds.includes(additionalExcludeId)
+      ) {
+        setExcludeIds(excludeIdsForRequest);
+      }
+
+      setRecommendLoading(true);
+      setRecommendError(null);
+
+      try {
+        const response = await fetch("/api/recommend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mood: selectedMoodId,
+            providers: resolveProviderIds(selectedPlatformIds),
+            minRating: 7.0,
+            excludeIds: excludeIdsForRequest,
+            mediaType: selectedMediaType,
+          }),
         });
-      });
-    } catch (error) {
-      setRecommendError(
-        error instanceof Error ? error.message : "Recommendation failed",
-      );
-    } finally {
-      setRecommendLoading(false);
-    }
-  },
+
+        const data = (await response.json()) as RecommendResponse & {
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Could not find a recommendation");
+        }
+
+        setPickResult(data.movie);
+        setTrailerUrl(data.trailerUrl ?? null);
+        setExcludeIds((prev) =>
+          prev.includes(data.movie.id) ? prev : [...prev, data.movie.id],
+        );
+
+        requestAnimationFrame(() => {
+          rouletteSectionRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+          });
+        });
+      } catch (error) {
+        setRecommendError(
+          error instanceof Error ? error.message : "Recommendation failed",
+        );
+      } finally {
+        setRecommendLoading(false);
+      }
+    },
     [selectedMoodId, selectedPlatformIds, excludeIds, selectedMediaType],
   );
 
@@ -427,7 +534,8 @@ export default function HomePage() {
     const el = trendingScrollRef.current;
     if (!el) return;
     el.scrollBy({
-      left: direction === "left" ? -el.clientWidth * 0.75 : el.clientWidth * 0.75,
+      left:
+        direction === "left" ? -el.clientWidth * 0.75 : el.clientWidth * 0.75,
       behavior: "smooth",
     });
   }, []);
@@ -468,9 +576,11 @@ export default function HomePage() {
   const pickDetailHref = pickResult
     ? `/${pickResult.mediaType === "tv" ? "tv" : "movie"}/${pickResult.id}/${movieSlug(pickResult.title)}`
     : null;
-  const posterUrl = pickResult ? tmdbImageUrl(pickResult.posterPath, "w500") : null;
+  const posterUrl = pickResult
+    ? tmdbImageUrl(pickResult.posterPath, "w500")
+    : null;
   const backdropUrl = pickResult
-    ? tmdbImageUrl(pickResult.backdropPath, "original")
+    ? tmdbImageUrl(pickResult.backdropPath, "w1280")
     : null;
 
   return (
@@ -487,15 +597,12 @@ export default function HomePage() {
             transform: translate(-50%, -50%) scale(1.12);
           }
         }
-        @keyframes hero-particle-float {
-          0%,
-          100% {
-            transform: translateY(0) translateX(0);
-            opacity: 0.2;
+        @keyframes hero-backdrop-fade {
+          from {
+            opacity: 0;
           }
-          50% {
-            transform: translateY(-18px) translateX(6px);
-            opacity: 0.55;
+          to {
+            opacity: 1;
           }
         }
         @keyframes cinematic-reveal {
@@ -511,8 +618,8 @@ export default function HomePage() {
         .hero-orb {
           animation: hero-orb-pulse 6s ease-in-out infinite;
         }
-        .hero-particle {
-          animation: hero-particle-float 5s ease-in-out infinite;
+        .hero-backdrop-active {
+          animation: hero-backdrop-fade 1.2s ease-in-out forwards;
         }
         .cinematic-reveal {
           animation: cinematic-reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1)
@@ -522,79 +629,74 @@ export default function HomePage() {
 
       {/* Full-screen cinematic hero */}
       <section className="relative flex min-h-screen min-h-[100dvh] flex-col overflow-hidden">
-        {/* Background */}
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0a0a0f] via-[#1a0a0a] to-[#0a0a0f]"
-          aria-hidden
-        />
-        <div
-          className="hero-orb pointer-events-none absolute left-1/2 top-[28%] size-[min(90vw,520px)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e50914]/25 blur-[100px]"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-50"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 45% at 50% 15%, rgba(229,9,20,0.22), transparent 65%)",
-          }}
-          aria-hidden
-        />
+        {/* Rotating backdrop slideshow */}
+        {heroBackdrops.length > 0 && !pickResult && (
+          <div className="pointer-events-none absolute inset-0" aria-hidden>
+            {heroBackdrops.map((url, index) => (
+              <Image
+                key={url}
+                src={url}
+                alt=""
+                fill
+                className={cn(
+                  "object-cover transition-opacity duration-[1200ms]",
+                  index === heroSlideIndex
+                    ? "opacity-40 hero-backdrop-active"
+                    : "opacity-0",
+                )}
+                unoptimized
+                priority={index === 0}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0f]/70 via-[#0a0a0f]/85 to-[#0a0a0f]" />
+          </div>
+        )}
 
-        {/* Floating particles */}
-        {[
-          { left: "12%", top: "22%", delay: "0s", size: 4 },
-          { left: "78%", top: "18%", delay: "1.2s", size: 3 },
-          { left: "65%", top: "38%", delay: "0.6s", size: 5 },
-          { left: "28%", top: "42%", delay: "1.8s", size: 3 },
-          { left: "88%", top: "32%", delay: "2.4s", size: 4 },
-          { left: "8%", top: "55%", delay: "0.9s", size: 3 },
-        ].map((p, i) => (
-          <span
-            key={i}
-            className="hero-particle pointer-events-none absolute rounded-full bg-[#e50914]"
-            style={{
-              left: p.left,
-              top: p.top,
-              width: p.size,
-              height: p.size,
-              animationDelay: p.delay,
-            }}
+        {/* Fallback background when no trending backdrops */}
+        {(heroBackdrops.length === 0 || pickResult) && (
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0a0a0f] via-[#1a0a0a] to-[#0a0a0f]"
             aria-hidden
           />
-        ))}
+        )}
+
+        <div
+          className="hero-orb pointer-events-none absolute left-1/2 top-[28%] size-[min(90vw,520px)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e50914]/20 blur-[100px]"
+          aria-hidden
+        />
 
         {/* Film grain */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.18] mix-blend-overlay"
+          className="pointer-events-none absolute inset-0 opacity-[0.12] mix-blend-overlay"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
           }}
           aria-hidden
         />
 
-        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-8 pt-10 sm:px-6 sm:pt-14 lg:px-8">
+        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-8 pt-8 sm:px-6 sm:pt-12 lg:px-8">
           {/* Headline */}
           <header className="text-center">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.35em] text-[#e50914]/90">
               FlixPick
             </p>
-            <h1 className="font-[family-name:var(--font-display)] text-4xl leading-[0.95] tracking-wide text-slate-100 sm:text-6xl lg:text-7xl">
+            <h1 className="font-[family-name:var(--font-display)] leading-[0.95] tracking-wide text-slate-100">
               Stop Scrolling.{" "}
               <span className="bg-gradient-to-r from-[#e50914] to-[#ff4d4d] bg-clip-text text-transparent">
                 Start Watching.
               </span>
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm text-slate-400 sm:text-base">
+            <p className="mx-auto mt-4 max-w-xl text-slate-400">
               Tell us your mood, pick your platforms. We&apos;ll find your
               perfect movie in seconds.
             </p>
           </header>
 
-          {/* Cinematic result */}
+          {/* Cinematic roulette result */}
           {pickResult && (
             <div
               ref={rouletteSectionRef}
-              className="cinematic-reveal relative mt-8 flex min-h-[300px] w-full flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/60"
+              className="cinematic-reveal relative mt-6 flex min-h-[320px] w-full flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/60 sm:mt-8"
             >
               {backdropUrl && (
                 <Image
@@ -606,7 +708,7 @@ export default function HomePage() {
                   priority
                 />
               )}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0f] via-[#0a0a0f]/93 to-[#0a0a0f]/80" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0f] via-[#0a0a0f]/93 to-[#0a0a0f]/75" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f]/50 to-[#0a0a0f]/30" />
 
               {recommendLoading && (
@@ -618,9 +720,9 @@ export default function HomePage() {
                 </div>
               )}
 
-              <div className="relative z-10 flex min-h-[300px] flex-col gap-8 p-6 sm:p-10 lg:flex-row lg:items-center lg:gap-12">
+              <div className="relative z-10 flex min-h-[320px] flex-col gap-6 p-5 sm:flex-row sm:items-center sm:gap-10 sm:p-10">
                 {posterUrl && (
-                  <div className="relative mx-auto aspect-[2/3] w-[200px] shrink-0 overflow-hidden rounded-xl border border-white/15 shadow-2xl sm:w-[250px] lg:mx-0">
+                  <div className="relative mx-auto aspect-[2/3] w-full max-w-[200px] shrink-0 overflow-hidden rounded-xl border border-white/15 shadow-2xl sm:max-w-[220px] lg:max-w-[250px] lg:mx-0">
                     <Image
                       src={posterUrl}
                       alt={`${pickResult.title} poster`}
@@ -632,14 +734,14 @@ export default function HomePage() {
                   </div>
                 )}
 
-                <div className="flex flex-1 flex-col justify-center text-center lg:text-left">
+                <div className="flex flex-1 flex-col justify-center text-center sm:text-left">
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#e50914] drop-shadow-sm">
                     Tonight&apos;s pick
                   </p>
-                  <h2 className="mt-2 font-[family-name:var(--font-display)] text-4xl tracking-wide text-white drop-shadow-lg sm:text-5xl">
+                  <h2 className="mt-2 font-[family-name:var(--font-display)] tracking-wide text-white drop-shadow-lg">
                     {pickResult.title}
                   </h2>
-                  <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm text-slate-200 lg:justify-start">
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm text-slate-200 sm:justify-start">
                     <span>{getReleaseYear(pickResult.releaseDate)}</span>
                     <span className="text-white/20">•</span>
                     <span className="flex items-center gap-1">
@@ -655,34 +757,45 @@ export default function HomePage() {
                       </span>
                     ))}
                   </div>
-                  <p className="mt-4 line-clamp-4 text-sm leading-relaxed text-slate-100/90 sm:line-clamp-5 sm:text-base">
+                  <p className="mt-4 line-clamp-4 text-sm leading-relaxed text-slate-100/90 sm:line-clamp-5">
                     {pickResult.overview}
                   </p>
 
-                  <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start">
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                     {trailerUrl && (
                       <button
                         type="button"
                         onClick={() => setTrailerOpen(true)}
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-white px-6 text-sm font-semibold text-[#0a0a0f] transition hover:bg-slate-200"
+                        className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-white px-6 text-sm font-semibold text-[#0a0a0f] transition hover:bg-slate-200"
                       >
                         <Play className="size-4 fill-current" />
                         Watch Trailer
                       </button>
                     )}
+                    {pickWatchHref && (
+                      <a
+                        href={pickWatchHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-[#e50914] px-6 text-sm font-semibold text-white transition hover:bg-[#f6121d]"
+                      >
+                        <ExternalLink className="size-4" />
+                        Where to Watch
+                      </a>
+                    )}
                     {pickDetailHref && (
                       <Link
                         href={pickDetailHref}
-                        className="inline-flex h-12 items-center justify-center rounded-lg bg-[#e50914] px-6 text-sm font-semibold text-white transition hover:bg-[#f6121d]"
+                        className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
                       >
-                        View Full Details
+                        View Details
                       </Link>
                     )}
                     <button
                       type="button"
                       onClick={handleRollAgain}
                       disabled={recommendLoading}
-                      className="inline-flex h-12 items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 text-sm font-medium text-slate-200 transition hover:border-white/30 hover:bg-white/10 disabled:opacity-50"
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 text-sm font-medium text-slate-200 transition hover:border-white/30 hover:bg-white/10 disabled:opacity-50"
                     >
                       Roll Again
                     </button>
@@ -690,7 +803,7 @@ export default function HomePage() {
                       type="button"
                       onClick={handleChangeMood}
                       disabled={recommendLoading}
-                      className="inline-flex h-12 items-center justify-center rounded-lg border border-white/10 px-6 text-sm font-medium text-slate-400 transition hover:border-white/25 hover:text-slate-200 disabled:opacity-50"
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-white/10 px-6 text-sm font-medium text-slate-400 transition hover:border-white/25 hover:text-slate-200 disabled:opacity-50"
                     >
                       Change Mood
                     </button>
@@ -708,16 +821,16 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Picker + wheel (above the fold) */}
+          {/* Picker (above the fold) */}
           {!pickResult && (
-            <div className="mt-8 flex flex-1 flex-col items-center justify-center gap-6 sm:gap-8">
+            <div className="mt-6 flex flex-1 flex-col items-center justify-center gap-5 sm:mt-8 sm:gap-7">
               {/* Media type toggle */}
               <div className="w-full max-w-md">
                 <p className="mb-3 text-center text-xs font-medium uppercase tracking-widest text-slate-500">
                   What are you in the mood for?
                 </p>
                 <div
-                  className="flex justify-center gap-2"
+                  className="flex flex-wrap justify-center gap-2"
                   role="group"
                   aria-label="Select media type"
                 >
@@ -730,7 +843,7 @@ export default function HomePage() {
                         aria-pressed={selected}
                         onClick={() => setSelectedMediaType(option.value)}
                         className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300",
+                          "btn-compact inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300",
                           selected
                             ? "border-[#e50914] bg-[#e50914]/15 text-white shadow-[0_0_20px_rgba(229,9,20,0.25)]"
                             : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.08] hover:text-white",
@@ -768,7 +881,7 @@ export default function HomePage() {
                         aria-checked={selected}
                         onClick={() => handleMoodSelect(mood.id)}
                         className={cn(
-                          "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-all duration-300",
+                          "btn-compact inline-flex min-h-[44px] items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-all duration-300",
                           selected
                             ? "border-[#e50914] bg-[#e50914]/15 text-white shadow-[0_0_20px_rgba(229,9,20,0.25)]"
                             : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.08] hover:text-white",
@@ -782,7 +895,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Platform icon pills */}
+              {/* Platform pills — horizontal scroll on mobile */}
               <div
                 ref={platformSectionRef}
                 className="w-full max-w-3xl scroll-mt-24"
@@ -796,7 +909,7 @@ export default function HomePage() {
                     onClick={toggleAllPlatforms}
                     aria-pressed={isAllPlatformsSelected}
                     className={cn(
-                      "rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition-all",
+                      "btn-compact rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition-all",
                       isAllPlatformsSelected
                         ? "border-[#e50914]/60 bg-[#e50914]/10 text-[#e50914]"
                         : "border-white/10 text-slate-500 hover:border-white/20 hover:text-slate-300",
@@ -806,7 +919,7 @@ export default function HomePage() {
                   </button>
                 </div>
                 <div
-                  className="flex flex-wrap justify-center gap-2"
+                  className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-center sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
                   role="group"
                   aria-label="Streaming platforms"
                 >
@@ -822,13 +935,16 @@ export default function HomePage() {
                         title={platform.name}
                         onClick={() => togglePlatform(platform.id)}
                         className={cn(
-                          "transition-all",
+                          "btn-compact shrink-0 transition-all",
                           selected ? "scale-110" : "opacity-70 hover:opacity-100",
                         )}
                       >
                         <TmdbProviderLogo
                           logoUrl={platform.logoUrl}
                           name={platform.name}
+                          tmdbProviderId={platform.tmdbProviderId}
+                          fallbackLabel={platform.fallbackLabel}
+                          fallbackBackground={platform.fallbackBackground}
                           size={44}
                           selected={selected}
                         />
@@ -856,7 +972,7 @@ export default function HomePage() {
                   ref={rouletteRef}
                   className={cn(
                     "w-full",
-                    "[&>div>button]:h-14 [&>div>button]:min-w-[260px] [&>div>button]:rounded-xl [&>div>button]:text-lg [&>div>button]:font-bold [&>div>button]:shadow-[0_8px_32px_rgba(229,9,20,0.35)]",
+                    "[&>div>button]:min-h-[44px] [&>div>button]:min-w-[260px] [&>div>button]:rounded-xl [&>div>button]:text-lg [&>div>button]:font-bold [&>div>button]:shadow-[0_8px_32px_rgba(229,9,20,0.35)]",
                     "[&>div>button]:transition-transform [&>div>button]:hover:scale-[1.02]",
                     "[&>div]:gap-5 [&>div>div:first-child]:scale-[0.85] sm:[&>div>div:first-child]:scale-90",
                   )}
@@ -897,15 +1013,17 @@ export default function HomePage() {
       )}
 
       {/* Trending */}
-      <SectionReveal className="border-t border-white/5 bg-[#07070b] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+      <SectionReveal className="border-t border-white/5 bg-[#07070b] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-10 border-l-4 border-[#e50914] pl-5 shadow-[0_0_20px_rgba(229,9,20,0.35)]">
-            <h2 className="font-[family-name:var(--font-display)] text-3xl tracking-wide text-slate-100 sm:text-4xl">
-              Trending Tonight 🔥
-            </h2>
-            <p className="mt-2 max-w-lg text-sm text-slate-500">
-              What everyone&apos;s watching right now.
-            </p>
+          <div className="mb-8 flex items-end justify-between gap-4 border-l-4 border-[#e50914] pl-5 shadow-[0_0_20px_rgba(229,9,20,0.35)]">
+            <div>
+              <h2 className="font-[family-name:var(--font-display)] tracking-wide text-slate-100">
+                Trending Now 🔥
+              </h2>
+              <p className="mt-2 max-w-lg text-sm text-slate-500">
+                What everyone&apos;s watching right now.
+              </p>
+            </div>
           </div>
 
           {trendingError && (
@@ -923,7 +1041,7 @@ export default function HomePage() {
                 type="button"
                 onClick={() => scrollTrending("left")}
                 aria-label="Scroll trending left"
-                className="absolute -left-2 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#0a0a0f]/95 text-slate-200 shadow-lg backdrop-blur-sm transition hover:border-white/30 hover:bg-[#12121a] sm:left-0"
+                className="absolute -left-2 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#0a0a0f]/95 text-slate-200 shadow-lg backdrop-blur-sm transition hover:border-white/30 hover:bg-[#12121a] sm:left-0"
               >
                 <ChevronLeft className="size-5" />
               </button>
@@ -933,7 +1051,7 @@ export default function HomePage() {
                 type="button"
                 onClick={() => scrollTrending("right")}
                 aria-label="Scroll trending right"
-                className="absolute -right-2 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#0a0a0f]/95 text-slate-200 shadow-lg backdrop-blur-sm transition hover:border-white/30 hover:bg-[#12121a] sm:right-0"
+                className="absolute -right-2 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#0a0a0f]/95 text-slate-200 shadow-lg backdrop-blur-sm transition hover:border-white/30 hover:bg-[#12121a] sm:right-0"
               >
                 <ChevronRight className="size-5" />
               </button>
@@ -941,13 +1059,13 @@ export default function HomePage() {
 
             <div
               ref={trendingScrollRef}
-              className="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-5 [&::-webkit-scrollbar]:hidden"
             >
               {trendingLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <MovieCardSkeleton
                     key={`trending-skeleton-${i}`}
-                    className="snap-start"
+                    className="w-[min(75vw,200px)] shrink-0 snap-start sm:w-[200px]"
                   />
                 ))}
 
@@ -957,7 +1075,7 @@ export default function HomePage() {
                     key={movie.id}
                     movie={movie}
                     showAvailability
-                    className="snap-start"
+                    className="w-[min(75vw,200px)] shrink-0 snap-start sm:w-[200px]"
                   />
                 ))}
 
@@ -969,6 +1087,46 @@ export default function HomePage() {
                   </p>
                 )}
             </div>
+          </div>
+        </div>
+      </SectionReveal>
+
+      {/* Editor's Picks */}
+      <SectionReveal className="border-t border-white/5 bg-[#0a0a0f] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-8 border-l-4 border-[#e50914] pl-5 shadow-[0_0_20px_rgba(229,9,20,0.35)]">
+            <h2 className="font-[family-name:var(--font-display)] tracking-wide text-slate-100">
+              Editor&apos;s Picks
+            </h2>
+            <p className="mt-2 max-w-lg text-sm text-slate-500">
+              Hand-curated masterpieces — rated 8.0+ by thousands of viewers.
+            </p>
+          </div>
+
+          {featuredError && (
+            <p
+              role="alert"
+              className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+            >
+              {featuredError}
+            </p>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
+            {featuredLoading &&
+              Array.from({ length: 6 }).map((_, i) => (
+                <MovieCardSkeleton key={`featured-skeleton-${i}`} />
+              ))}
+
+            {!featuredLoading &&
+              featuredMovies.map((movie, index) => (
+                <MovieCard
+                  key={movie.id}
+                  movie={movie}
+                  showAvailability
+                  priority={index < 3}
+                />
+              ))}
           </div>
         </div>
       </SectionReveal>

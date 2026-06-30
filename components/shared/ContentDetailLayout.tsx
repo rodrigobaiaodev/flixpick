@@ -141,9 +141,9 @@ export function ContentDetailLayout({
               Back
             </button>
 
-            <div className="mt-auto flex flex-1 flex-col gap-10 pb-12 lg:flex-row lg:items-end lg:gap-14">
+            <div className="mt-auto flex flex-1 flex-col gap-8 pb-12 sm:gap-10 lg:flex-row lg:items-end lg:gap-14">
               {posterUrl && (
-                <div className="mx-auto w-[220px] shrink-0 lg:sticky lg:top-28 lg:mx-0 lg:w-[280px] lg:self-start">
+                <div className="mx-auto w-full max-w-[min(100%,280px)] shrink-0 sm:max-w-[240px] lg:sticky lg:top-28 lg:mx-0 lg:w-[280px] lg:max-w-none lg:self-start">
                   <div className="overflow-hidden rounded-2xl border border-white/15 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
                     <div className="relative aspect-[2/3]">
                       <Image
@@ -420,9 +420,9 @@ export function ContentDetailLayout({
               <h2 className="border-l-4 border-[#e50914] pl-4 font-[family-name:var(--font-display)] text-2xl tracking-wide text-white shadow-[0_0_12px_rgba(229,9,20,0.4)]">
                 {similarSectionTitle}
               </h2>
-              <div className="mt-6 flex gap-4 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20">
+              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                 {similar.map((item) => (
-                  <MovieCard key={item.id} movie={item} className="shrink-0" />
+                  <MovieCard key={item.id} movie={item} showAvailability />
                 ))}
               </div>
             </section>

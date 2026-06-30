@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, Inter } from "next/font/google";
+import { DM_Sans, Syne } from "next/font/google";
 import { Footer } from "@/components/shared/Footer";
 import { Header } from "@/components/shared/Header";
 import "./globals.css";
 
-const inter = Inter({
+const syne = Syne({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-display",
+  weight: ["700", "800"],
   display: "swap",
 });
 
-const bebasNeue = Bebas_Neue({
-  weight: "400",
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  variable: "--font-display",
+  variable: "--font-body",
   display: "swap",
 });
 
@@ -35,10 +35,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${bebasNeue.variable} h-full antialiased`}
+      className={`${syne.variable} ${dmSans.variable} h-full antialiased`}
     >
       <body
-        className={`${inter.className} flex min-h-full flex-col bg-[#0a0a0f] text-slate-100`}
+        className={`${dmSans.className} flex min-h-full flex-col bg-[#0a0a0f] text-slate-100`}
       >
         <Header />
         <main className="flex-1">{children}</main>

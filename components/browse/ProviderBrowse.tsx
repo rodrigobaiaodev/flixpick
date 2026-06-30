@@ -71,6 +71,9 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
           <TmdbProviderLogo
             logoUrl={platform.logoUrl}
             name={platform.name}
+            tmdbProviderId={platform.tmdbProviderId}
+            fallbackLabel={platform.fallbackLabel}
+            fallbackBackground={platform.fallbackBackground}
             size={80}
           />
           <div>
@@ -149,7 +152,7 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {loading
             ? Array.from({ length: 20 }).map((_, i) => (
                 <MovieCardSkeleton key={i} />
