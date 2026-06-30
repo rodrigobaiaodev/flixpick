@@ -20,7 +20,13 @@
 
 **FlixPick** helps you decide what to watch next — without endless scrolling. Pick your mood, choose your streaming platforms, spin the roulette, and get a cinematic recommendation in seconds. Save titles to your personal list, track what you're watching, and build a profile that reflects your taste.
 
-![FlixPick Homepage — mood picker, platform selector & cinematic hero](./public/screenshots/home.png)
+![FlixPick Homepage — mood picker, platform selector & cinematic hero](./public/screenshots/Flixpick%20home.)
+![FlixPick Roulette](./public/screenshots/Flixpick%20%20roulette.png)
+![FlixPick Details movies](./public/screenshots/Flixpick%20details%20movies%20and%20tvshow.png)
+![FlixPick Browse](./public/screenshots/Flixpick%20%20Browse.png)
+![FlixPick watching](./public/screenshots/Flixpick%20%20watching.png)
+![FlixPick My list](./public/screenshots/Flixpick%20%20my%20list.png)
+
 
 ---
 
