@@ -45,6 +45,7 @@ export function TVDetailContent({
 
   return (
     <ContentDetailLayout
+      contentId={show.id}
       mediaType="tv"
       title={show.title}
       originalTitle={show.originalTitle}

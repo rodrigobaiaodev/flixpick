@@ -11,6 +11,8 @@ import {
   TmdbProviderLogo,
 } from "@/components/shared/TmdbProviderLogo";
 import { TrailerModal } from "@/components/shared/TrailerModal";
+import { ListButton } from "@/components/shared/ListButton";
+import { WatchStatusButton } from "@/components/shared/WatchStatusButton";
 import type { ContentItem, Genre, Person, StreamingProvider } from "@/types/movie";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +33,7 @@ export interface TechnicalDetailRow {
 }
 
 interface ContentDetailLayoutProps {
+  contentId: number;
   mediaType: "movie" | "tv";
   title: string;
   originalTitle: string;
@@ -63,6 +66,7 @@ function RatingBadge({ rating }: { rating: number }) {
 }
 
 export function ContentDetailLayout({
+  contentId,
   mediaType,
   title,
   originalTitle,
@@ -87,6 +91,7 @@ export function ContentDetailLayout({
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [activeVideoKey, setActiveVideoKey] = useState<string | null>(null);
+  const [isOnList, setIsOnList] = useState(false);
 
   const posterUrl = posterPath
     ? `https://image.tmdb.org/t/p/w500${posterPath}`
@@ -168,6 +173,33 @@ export function ContentDetailLayout({
                 {originalTitle && originalTitle !== title && (
                   <p className="mt-2 text-base text-slate-400">{originalTitle}</p>
                 )}
+
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-center lg:justify-start">
+                  <ListButton
+                    contentId={contentId}
+                    contentType={mediaType}
+                    contentData={{
+                      contentTitle: title,
+                      posterPath,
+                      backdropPath,
+                      rating: voteAverage,
+                    }}
+                    variant="detail"
+                    onListChange={setIsOnList}
+                  />
+                  <WatchStatusButton
+                    contentId={contentId}
+                    contentType={mediaType}
+                    contentData={{
+                      contentTitle: title,
+                      posterPath,
+                      backdropPath,
+                      rating: voteAverage,
+                    }}
+                    isOnList={isOnList}
+                    variant="detail"
+                  />
+                </div>
 
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
                   <span className="text-sm font-medium text-slate-200">{year}</span>

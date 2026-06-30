@@ -10,6 +10,7 @@ import {
   movieSlug,
 } from "@/lib/genres";
 import { getWhereToWatchUrlForMovie } from "@/lib/watch-links";
+import { ListButton } from "@/components/shared/ListButton";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
 import type { ContentItem } from "@/types/movie";
 import type { MovieCardProps } from "@/types/ui";
@@ -191,6 +192,20 @@ export function MovieCard(props: MovieCardComponentProps) {
             />
           </span>
         )}
+
+        {/* List button — bottom right */}
+        <ListButton
+          contentId={movie.id}
+          contentType={movie.mediaType}
+          contentData={{
+            contentTitle: movie.title,
+            posterPath: movie.posterPath,
+            backdropPath: movie.backdropPath,
+            rating: movie.voteAverage,
+          }}
+          variant="card"
+          className="absolute bottom-14 right-2"
+        />
 
         {/* Title overlay — bottom gradient */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-3 pb-3 pt-12">

@@ -41,6 +41,7 @@ export function MovieDetailContent({
 
   return (
     <ContentDetailLayout
+      contentId={movie.id}
       mediaType="movie"
       title={movie.title}
       originalTitle={movie.originalTitle}

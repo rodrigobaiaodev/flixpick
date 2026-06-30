@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { DM_Sans, Syne } from "next/font/google";
+import { AuthProvider } from "@/components/shared/AuthProvider";
 import { Footer } from "@/components/shared/Footer";
 import { Header } from "@/components/shared/Header";
+import { LoginModal } from "@/components/shared/LoginModal";
 import "./globals.css";
 
 const syne = Syne({
@@ -40,9 +42,12 @@ export default function RootLayout({
       <body
         className={`${dmSans.className} flex min-h-full flex-col bg-[#0a0a0f] text-slate-100`}
       >
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <AuthProvider>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <LoginModal />
+        </AuthProvider>
       </body>
     </html>
   );
