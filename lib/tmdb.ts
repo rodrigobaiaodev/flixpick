@@ -642,11 +642,13 @@ export async function fetchRecommendCandidates(
   mediaType: RecommendMediaType = "both",
 ): Promise<ContentItem[]> {
   if (mediaType === "both") {
-    const [movies, tvShows] = await Promise.all([
-      fetchMoodCandidatesByType(moodSlug, providerIds, "movie", 20),
-      fetchMoodCandidatesByType(moodSlug, providerIds, "tv", 20),
-    ]);
-    return [...movies, ...tvShows];
+    const resolvedType: MediaType = Math.random() < 0.5 ? "movie" : "tv";
+    return fetchMoodCandidatesByType(
+      moodSlug,
+      providerIds,
+      resolvedType,
+      40,
+    );
   }
 
   return fetchMoodCandidatesByType(

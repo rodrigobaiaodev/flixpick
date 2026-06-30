@@ -4,28 +4,18 @@ import {
   STREAMING_PLATFORMS,
   getTmdbDiscoverIds,
 } from "@/lib/streaming-platforms";
+import { getMoodDefinition, MOOD_DEFINITIONS } from "@/lib/moods";
 
 /** Mood slug → TMDB movie genre IDs (comma-AND on discover). */
-export const MOOD_TO_MOVIE_GENRE_IDS: Record<string, number[]> = {
-  "action-packed": [28, 12],
-  "need-to-laugh": [35],
-  "mind-bending": [878, 9648],
-  "horror-night": [27, 53],
-  "feel-good": [10749, 35, 18],
-  "tense-mystery": [9648, 53],
-  "good-cry": [18, 10749],
-};
+export const MOOD_TO_MOVIE_GENRE_IDS: Record<string, number[]> =
+  Object.fromEntries(
+    MOOD_DEFINITIONS.map((mood) => [mood.slug, mood.movieGenres]),
+  );
 
 /** Mood slug → TMDB TV genre IDs. */
-export const MOOD_TO_TV_GENRE_IDS: Record<string, number[]> = {
-  "action-packed": [10759, 10765],
-  "need-to-laugh": [35],
-  "mind-bending": [9648, 10765],
-  "horror-night": [9648, 80],
-  "feel-good": [35, 10751],
-  "tense-mystery": [9648, 80],
-  "good-cry": [18, 10749],
-};
+export const MOOD_TO_TV_GENRE_IDS: Record<string, number[]> = Object.fromEntries(
+  MOOD_DEFINITIONS.map((mood) => [mood.slug, mood.tvGenres]),
+);
 
 /** @deprecated Use MOOD_TO_MOVIE_GENRE_IDS */
 export const MOOD_TO_GENRE_IDS = MOOD_TO_MOVIE_GENRE_IDS;
@@ -60,6 +50,12 @@ export function getMoodGenreIds(
   mediaType: MediaType = "movie",
 ): number[] {
   if (isWorldCinemaMood(moodSlug)) return [];
+
+  const mood = getMoodDefinition(moodSlug);
+  if (mood) {
+    return mediaType === "tv" ? mood.tvGenres : mood.movieGenres;
+  }
+
   const map =
     mediaType === "tv" ? MOOD_TO_TV_GENRE_IDS : MOOD_TO_MOVIE_GENRE_IDS;
   return map[moodSlug] ?? [];

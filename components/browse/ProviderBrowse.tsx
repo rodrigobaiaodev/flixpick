@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { FLIXPICK_MOODS } from "@/components/shared/MoodButton";
+import { Clapperboard, Tv } from "lucide-react";
+import { FLIXPICK_MOODS, MoodIcon } from "@/components/shared/MoodButton";
 import { MovieCard, MovieCardSkeleton } from "@/components/shared/MovieCard";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
 import type { StreamingPlatform } from "@/lib/streaming-platforms";
@@ -89,22 +90,31 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
           </div>
         </header>
 
-        <div className="mb-6 flex gap-2">
-          {(["movie", "tv"] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setMediaType(type)}
-              className={cn(
-                "rounded-full border px-4 py-2 text-sm font-medium transition",
-                mediaType === type
-                  ? "border-white text-white"
-                  : "border-white/10 text-slate-400 hover:text-white",
-              )}
-            >
-              {type === "movie" ? "Movies" : "TV Shows"}
-            </button>
-          ))}
+        <div className="mb-6 flex flex-wrap gap-2">
+          {(
+            [
+              { type: "movie" as const, label: "Movies", Icon: Clapperboard },
+              { type: "tv" as const, label: "TV Shows", Icon: Tv },
+            ] as const
+          ).map(({ type, label, Icon }) => {
+            const selected = mediaType === type;
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setMediaType(type)}
+                className={cn(
+                  "inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300",
+                  selected
+                    ? "border-[#e50914] bg-[#e50914]/15 text-[#e50914] shadow-[0_0_20px_rgba(229,9,20,0.25)]"
+                    : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.08] hover:text-white",
+                )}
+              >
+                <MoodIcon Icon={Icon} selected={selected} size={18} />
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="mb-8">
@@ -118,28 +128,31 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
               className={cn(
                 "rounded-full border px-3 py-1.5 text-sm transition",
                 !selectedMood
-                  ? "border-[#e50914] bg-[#e50914]/15 text-white"
+                  ? "border-[#e50914] bg-[#e50914]/15 text-[#e50914]"
                   : "border-white/10 text-slate-400 hover:text-white",
               )}
             >
               All
             </button>
-            {FLIXPICK_MOODS.map((mood) => (
+            {FLIXPICK_MOODS.map((mood) => {
+              const selected = selectedMood === mood.id;
+              return (
               <button
                 key={mood.id}
                 type="button"
                 onClick={() => setSelectedMood(mood.id)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition",
-                  selectedMood === mood.id
-                    ? "border-[#e50914] bg-[#e50914]/15 text-white"
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition",
+                  selected
+                    ? "border-[#e50914] bg-[#e50914]/15 text-[#e50914]"
                     : "border-white/10 text-slate-400 hover:text-white",
                 )}
               >
-                <span aria-hidden>{mood.icon}</span>
+                <MoodIcon Icon={mood.Icon} selected={selected} size={18} />
                 {mood.label}
               </button>
-            ))}
+            );
+            })}
           </div>
         </div>
 

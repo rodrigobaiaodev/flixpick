@@ -1,4 +1,6 @@
 /** Core media type identifiers aligned with TMDB-style APIs */
+import type { LucideIcon } from "lucide-react";
+
 export type MediaType = "movie" | "tv";
 
 /** Recommendation / discover scope */
@@ -78,9 +80,9 @@ export interface Mood {
   slug: string;
   label: string;
   description: string;
-  icon: string;
-  /** TMDB genre IDs or internal tag IDs associated with this mood */
-  genreIds: number[];
+  Icon: LucideIcon;
+  movieGenres: number[];
+  tvGenres: number[];
   gradientFrom: string;
   gradientTo: string;
 }

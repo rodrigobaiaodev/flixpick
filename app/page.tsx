@@ -10,9 +10,9 @@ import {
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ExternalLink, Play, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clapperboard, ExternalLink, Play, Shuffle, Star, Tv } from "lucide-react";
 import { AdBanner } from "@/components/shared/AdBanner";
-import { FLIXPICK_MOODS } from "@/components/shared/MoodButton";
+import { FLIXPICK_MOODS, MoodIcon } from "@/components/shared/MoodButton";
 import {
   getGenreDisplayName,
   movieSlug,
@@ -31,6 +31,7 @@ import { TrailerModal } from "@/components/shared/TrailerModal";
 import { getWhereToWatchUrlForMovie } from "@/lib/watch-links";
 import { cn } from "@/lib/utils";
 import type { ContentItem, RecommendMediaType } from "@/types/movie";
+import type { LucideIcon } from "lucide-react";
 
 const AD_CLIENT = "ca-pub-XXXXXXXX";
 
@@ -77,11 +78,11 @@ interface StoredLastPick {
 const MEDIA_TYPE_OPTIONS: {
   value: RecommendMediaType;
   label: string;
-  icon: string;
+  Icon: LucideIcon;
 }[] = [
-  { value: "movie", label: "Movies", icon: "🎬" },
-  { value: "tv", label: "TV Shows", icon: "📺" },
-  { value: "both", label: "Both", icon: "🎯" },
+  { value: "movie", label: "Movies", Icon: Clapperboard },
+  { value: "tv", label: "TV Shows", Icon: Tv },
+  { value: "both", label: "Both", Icon: Shuffle },
 ];
 
 function readJson<T>(key: string): T | null {
@@ -832,13 +833,13 @@ export default function HomePage() {
                         aria-pressed={selected}
                         onClick={() => setSelectedMediaType(option.value)}
                         className={cn(
-                          "btn-compact inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300",
+                          "btn-compact inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300",
                           selected
-                            ? "border-[#e50914] bg-[#e50914]/15 text-white shadow-[0_0_20px_rgba(229,9,20,0.25)]"
+                            ? "border-[#e50914] bg-[#e50914]/15 text-[#e50914] shadow-[0_0_20px_rgba(229,9,20,0.25)]"
                             : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.08] hover:text-white",
                         )}
                       >
-                        <span aria-hidden>{option.icon}</span>
+                        <MoodIcon Icon={option.Icon} selected={selected} size={18} />
                         <span>{option.label}</span>
                       </button>
                     );
@@ -872,11 +873,11 @@ export default function HomePage() {
                         className={cn(
                           "btn-compact inline-flex min-h-[44px] items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-all duration-300",
                           selected
-                            ? "border-[#e50914] bg-[#e50914]/15 text-white shadow-[0_0_20px_rgba(229,9,20,0.25)]"
+                            ? "border-[#e50914] bg-[#e50914]/15 text-[#e50914] shadow-[0_0_20px_rgba(229,9,20,0.25)]"
                             : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.08] hover:text-white",
                         )}
                       >
-                        <span aria-hidden>{mood.icon}</span>
+                        <MoodIcon Icon={mood.Icon} selected={selected} size={18} />
                         <span className="whitespace-nowrap">{mood.label}</span>
                       </button>
                     );
