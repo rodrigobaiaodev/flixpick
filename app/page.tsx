@@ -21,12 +21,13 @@ import {
 } from "@/components/shared/MovieCard";
 import {
   STREAMING_PLATFORMS,
+  getAllTmdbDiscoverIds,
+  getTmdbDiscoverIdsBySlug,
   type StreamingPlatform,
 } from "@/lib/streaming-platforms";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
 import { RouletteWheel } from "@/components/shared/RouletteWheel";
 import { TrailerModal } from "@/components/shared/TrailerModal";
-import { TMDB_PROVIDER_IDS } from "@/lib/providers-moods";
 import { getWhereToWatchUrlForMovie } from "@/lib/watch-links";
 import { cn } from "@/lib/utils";
 import type { ContentItem, RecommendMediaType } from "@/types/movie";
@@ -40,17 +41,17 @@ const STORAGE_KEYS = {
   excludeIds: "flixpick:excludeIds",
 } as const;
 
-/** Map PlatformSelector slugs → TMDB watch_provider IDs (US). */
-const PLATFORM_SLUG_TO_TMDB_ID: Record<string, number> = {
-  netflix: 8,
-  prime: 9,
-  max: 384,
-  disney: 337,
-  apple: 350,
-  hulu: 15,
-  peacock: 386,
-  paramount: 531,
-};
+function resolveProviderIds(selectedPlatformSlugs: string[]): number[] {
+  if (selectedPlatformSlugs.length === 0) {
+    return getAllTmdbDiscoverIds();
+  }
+
+  const ids = selectedPlatformSlugs.flatMap((slug) =>
+    getTmdbDiscoverIdsBySlug(slug),
+  );
+
+  return ids.length > 0 ? ids : getAllTmdbDiscoverIds();
+}
 
 interface RecommendResponse {
   movie: ContentItem;
@@ -101,18 +102,6 @@ function writeJson(key: string, value: unknown) {
   } catch {
     /* quota or private mode */
   }
-}
-
-function resolveProviderIds(selectedPlatformSlugs: string[]): number[] {
-  if (selectedPlatformSlugs.length === 0) {
-    return [...TMDB_PROVIDER_IDS];
-  }
-
-  const ids = selectedPlatformSlugs
-    .map((slug) => PLATFORM_SLUG_TO_TMDB_ID[slug])
-    .filter((id): id is number => typeof id === "number");
-
-  return ids.length > 0 ? ids : [...TMDB_PROVIDER_IDS];
 }
 
 function tmdbImageUrl(

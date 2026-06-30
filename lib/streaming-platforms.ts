@@ -3,8 +3,10 @@ export interface StreamingPlatform {
   name: string;
   shortLabel: string;
   brandColor: string;
-  /** TMDB provider ID when available */
+  /** Primary TMDB provider ID (logo lookup) */
   tmdbProviderId?: number;
+  /** TMDB provider IDs for discover queries; defaults to [tmdbProviderId] */
+  tmdbDiscoverProviderIds?: number[];
   logoUrl?: string;
   iconBackground: string;
   /** Fallback when TMDB logo is unavailable */
@@ -12,6 +14,22 @@ export interface StreamingPlatform {
   /** Custom fallback text rendered on iconBackground when no TMDB logo */
   fallbackLabel?: string;
   fallbackBackground?: string;
+}
+
+export function getTmdbDiscoverIds(platform: StreamingPlatform): number[] {
+  if (platform.tmdbDiscoverProviderIds?.length) {
+    return platform.tmdbDiscoverProviderIds;
+  }
+  return platform.tmdbProviderId != null ? [platform.tmdbProviderId] : [];
+}
+
+export function getAllTmdbDiscoverIds(): number[] {
+  return STREAMING_PLATFORMS.flatMap(getTmdbDiscoverIds);
+}
+
+export function getTmdbDiscoverIdsBySlug(slug: string): number[] {
+  const platform = STREAMING_PLATFORMS.find((p) => p.id === slug);
+  return platform ? getTmdbDiscoverIds(platform) : [];
 }
 
 export const STREAMING_PLATFORMS: StreamingPlatform[] = [
@@ -36,11 +54,8 @@ export const STREAMING_PLATFORMS: StreamingPlatform[] = [
     name: "Max",
     shortLabel: "max",
     brandColor: "#002be7",
-    tmdbProviderId: 384,
+    tmdbProviderId: 1899,
     iconBackground: "#002be7",
-    fallbackLabel: "max",
-    fallbackBackground: "#002be7",
-    useLetterIcon: true,
   },
   {
     id: "disney",
@@ -80,10 +95,8 @@ export const STREAMING_PLATFORMS: StreamingPlatform[] = [
     name: "Paramount+",
     shortLabel: "P+",
     brandColor: "#0064ff",
-    tmdbProviderId: 531,
+    tmdbProviderId: 2303,
+    tmdbDiscoverProviderIds: [2303, 2616],
     iconBackground: "#0064ff",
-    fallbackLabel: "P+",
-    fallbackBackground: "#0064ff",
-    useLetterIcon: true,
   },
 ];

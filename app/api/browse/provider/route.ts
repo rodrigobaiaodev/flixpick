@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { isValidMoodSlug } from "@/lib/providers-moods";
-import { STREAMING_PLATFORMS } from "@/lib/streaming-platforms";
+import {
+  STREAMING_PLATFORMS,
+  getTmdbDiscoverIds,
+} from "@/lib/streaming-platforms";
 import { browseByProvider } from "@/lib/tmdb";
 import type { MediaType } from "@/types/movie";
 
@@ -22,7 +25,8 @@ export async function GET(request: Request) {
     }
 
     const platform = STREAMING_PLATFORMS.find((p) => p.id === providerSlug);
-    if (!platform?.tmdbProviderId) {
+    const providerIds = platform ? getTmdbDiscoverIds(platform) : [];
+    if (!platform || providerIds.length === 0) {
       return NextResponse.json({ error: "Unknown provider" }, { status: 404 });
     }
 
@@ -35,7 +39,7 @@ export async function GET(request: Request) {
     }
 
     const result = await browseByProvider({
-      providerId: platform.tmdbProviderId,
+      providerId: providerIds,
       mediaType,
       moodSlug: mood,
       page: Number.isNaN(page) ? 1 : page,

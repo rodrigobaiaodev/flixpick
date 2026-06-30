@@ -781,19 +781,22 @@ export async function browseDiscoverTV(options: {
 }
 
 export async function browseByProvider(options: {
-  providerId: number;
+  providerId: number | number[];
   mediaType: MediaType;
   moodSlug?: string;
   page?: number;
 }): Promise<MovieSearchResult> {
   const { providerId, mediaType, moodSlug, page = 1 } = options;
+  const providerQuery = Array.isArray(providerId)
+    ? providerId.join("|")
+    : String(providerId);
 
   const params: Record<string, TmdbQueryValue> = {
     watch_region: WATCH_REGION,
     page,
     sort_by: "popularity.desc",
     include_adult: false,
-    with_watch_providers: String(providerId),
+    with_watch_providers: providerQuery,
     with_watch_monetization_types: "flatrate|free|ads",
     "vote_count.gte": 50,
   };

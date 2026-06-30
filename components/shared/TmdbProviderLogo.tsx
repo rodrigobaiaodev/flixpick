@@ -10,8 +10,8 @@ const PROVIDER_FALLBACKS: Record<
   number,
   { label: string; background: string; fontSize?: string }
 > = {
-  384: { label: "max", background: "#002be7", fontSize: "11px" },
-  531: { label: "P+", background: "#0064ff", fontSize: "13px" },
+  1899: { label: "max", background: "#002be7", fontSize: "11px" },
+  2303: { label: "P+", background: "#0064ff", fontSize: "13px" },
 };
 
 interface TmdbProviderLogoProps {

@@ -1,4 +1,9 @@
 import type { MediaType } from "@/types/movie";
+import {
+  getAllTmdbDiscoverIds,
+  STREAMING_PLATFORMS,
+  getTmdbDiscoverIds,
+} from "@/lib/streaming-platforms";
 
 /** Mood slug → TMDB movie genre IDs (comma-AND on discover). */
 export const MOOD_TO_MOVIE_GENRE_IDS: Record<string, number[]> = {
@@ -28,19 +33,23 @@ export const MOOD_TO_GENRE_IDS = MOOD_TO_MOVIE_GENRE_IDS;
 /** Uses original_language !== "en" instead of genre IDs. */
 export const WORLD_CINEMA_MOOD_SLUG = "world-cinema";
 
-/** Platform slug → TMDB watch_provider ID (US). */
+/** Platform slug → primary TMDB watch_provider ID (US). */
 export const PROVIDER_SLUG_TO_TMDB_ID: Record<string, number> = {
   netflix: 8,
+  prime: 9,
   "prime-video": 9,
-  max: 384,
+  max: 1899,
+  disney: 337,
   "disney-plus": 337,
+  apple: 350,
   "apple-tv-plus": 350,
   hulu: 15,
   peacock: 386,
-  "paramount-plus": 531,
+  paramount: 2303,
+  "paramount-plus": 2303,
 };
 
-export const TMDB_PROVIDER_IDS = Object.values(PROVIDER_SLUG_TO_TMDB_ID);
+export const TMDB_PROVIDER_IDS = getAllTmdbDiscoverIds();
 
 export function isWorldCinemaMood(moodSlug: string): boolean {
   return moodSlug === WORLD_CINEMA_MOOD_SLUG;
@@ -72,5 +81,7 @@ export function resolveProviderTmdbId(
   if (!Number.isNaN(asNumber) && TMDB_PROVIDER_IDS.includes(asNumber)) {
     return asNumber;
   }
+  const platform = STREAMING_PLATFORMS.find((p) => p.id === slugOrId);
+  if (platform) return getTmdbDiscoverIds(platform)[0];
   return PROVIDER_SLUG_TO_TMDB_ID[slugOrId];
 }

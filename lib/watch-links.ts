@@ -17,7 +17,12 @@ const PROVIDER_SEARCH_BUILDERS: {
       `https://www.amazon.com/s?k=${encodeURIComponent(title)}`,
   },
   {
-    id: 384,
+    id: 1899,
+    build: (title) =>
+      `https://www.max.com/search?q=${encodeURIComponent(title)}`,
+  },
+  {
+    id: 1825,
     build: (title) =>
       `https://www.max.com/search?q=${encodeURIComponent(title)}`,
   },
