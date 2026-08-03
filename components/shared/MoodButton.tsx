@@ -13,6 +13,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import { MOOD_CONFIG } from "@/lib/providers-moods";
 import { MOOD_DEFINITIONS } from "@/lib/moods";
 import type { Mood } from "@/types/movie";
 import type { MoodChipProps } from "@/types/ui";
@@ -31,10 +32,42 @@ const MOOD_ICONS: Record<string, LucideIcon> = {
   "epic-fantasy": Sparkles,
 };
 
-export const FLIXPICK_MOODS: Mood[] = MOOD_DEFINITIONS.map((mood) => ({
-  ...mood,
-  Icon: MOOD_ICONS[mood.slug] ?? Sparkles,
-}));
+const MOOD_GRADIENTS = Object.fromEntries(
+  MOOD_DEFINITIONS.map((mood) => [
+    mood.slug,
+    { from: mood.gradientFrom, to: mood.gradientTo },
+  ]),
+);
+
+export type FlixpickMood = Mood & { emoji: string };
+
+/** All 10 moods from MOOD_CONFIG — emoji + label + subtitle. */
+export const FLIXPICK_MOODS: FlixpickMood[] = Object.entries(MOOD_CONFIG).map(
+  ([slug, config]) => {
+    const gradients = MOOD_GRADIENTS[slug] ?? {
+      from: "#1e293b",
+      to: "#334155",
+    };
+    const subtitle = config.keywords
+      .split(",")
+      .slice(0, 2)
+      .map((part) => part.trim())
+      .join(" · ");
+
+    return {
+      id: slug,
+      slug,
+      label: config.label,
+      description: subtitle,
+      emoji: config.emoji,
+      Icon: MOOD_ICONS[slug] ?? Sparkles,
+      movieGenres: config.movieGenres,
+      tvGenres: config.tvGenres,
+      gradientFrom: gradients.from,
+      gradientTo: gradients.to,
+    };
+  },
+);
 
 export interface MoodIconProps {
   Icon: LucideIcon;
@@ -75,6 +108,7 @@ export function MoodButton({
   subtitle,
 }: MoodButtonProps) {
   const description = subtitle ?? mood.description;
+  const emoji = "emoji" in mood ? String((mood as FlixpickMood).emoji) : null;
 
   return (
     <>
@@ -99,7 +133,14 @@ export function MoodButton({
               }
         }
       >
-        <MoodIcon Icon={mood.Icon} selected={selected} size={24} />
+        <span className="flex items-center gap-2">
+          {emoji && (
+            <span className="text-xl leading-none" aria-hidden>
+              {emoji}
+            </span>
+          )}
+          <MoodIcon Icon={mood.Icon} selected={selected} size={24} />
+        </span>
         <span className="mt-3 block w-full">
           <span
             className={cn(

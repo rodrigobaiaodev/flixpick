@@ -26,6 +26,7 @@ import {
   getTmdbDiscoverIdsBySlug,
   type StreamingPlatform,
 } from "@/lib/streaming-platforms";
+import { MOOD_REFINE_GENRES } from "@/lib/providers-moods";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
 import { RouletteWheel } from "@/components/shared/RouletteWheel";
 import { TrailerModal } from "@/components/shared/TrailerModal";
@@ -58,6 +59,7 @@ function resolveProviderIds(selectedPlatformSlugs: string[]): number[] {
 interface RecommendResponse {
   movie: ContentItem;
   trailerUrl: string | null;
+  mediaType?: ContentItem["mediaType"];
 }
 
 interface TrendingResponse {
@@ -180,6 +182,12 @@ export default function HomePage() {
 
   const [hydrated, setHydrated] = useState(false);
   const [selectedMoodId, setSelectedMoodId] = useState<string | null>(null);
+  const [selectedRefineGenreId, setSelectedRefineGenreId] = useState<
+    number | null
+  >(null);
+  const [selectedRefineLabel, setSelectedRefineLabel] = useState<string | null>(
+    null,
+  );
   const [selectedPlatformIds, setSelectedPlatformIds] = useState<string[]>([]);
   const [excludeIds, setExcludeIds] = useState<number[]>([]);
 
@@ -228,6 +236,8 @@ export default function HomePage() {
 
     if (moodFromUrl && FLIXPICK_MOODS.some((m) => m.id === moodFromUrl)) {
       setSelectedMoodId(moodFromUrl);
+      setSelectedRefineGenreId(null);
+      setSelectedRefineLabel(null);
       setPickResult(null);
       setTrailerUrl(null);
       localStorage.removeItem(STORAGE_KEYS.lastPick);
@@ -430,6 +440,8 @@ export default function HomePage() {
 
   const handleMoodSelect = useCallback((moodId: string) => {
     setSelectedMoodId(moodId);
+    setSelectedRefineGenreId(null);
+    setSelectedRefineLabel(null);
     setRecommendError(null);
 
     requestAnimationFrame(() => {
@@ -439,6 +451,20 @@ export default function HomePage() {
       });
     });
   }, []);
+
+  const handleRefineGenreToggle = useCallback(
+    (genre: { id: number; label: string }) => {
+      setSelectedRefineLabel((prevLabel) => {
+        if (prevLabel === genre.label) {
+          setSelectedRefineGenreId(null);
+          return null;
+        }
+        setSelectedRefineGenreId(genre.id);
+        return genre.label;
+      });
+    },
+    [],
+  );
 
   const handleSpin = useCallback(
     async (additionalExcludeId?: number) => {
@@ -471,9 +497,11 @@ export default function HomePage() {
           body: JSON.stringify({
             mood: selectedMoodId,
             providers: resolveProviderIds(selectedPlatformIds),
-            minRating: 7.0,
             excludeIds: excludeIdsForRequest,
             mediaType: selectedMediaType,
+            ...(selectedRefineGenreId
+              ? { genreId: selectedRefineGenreId }
+              : {}),
           }),
         });
 
@@ -505,7 +533,13 @@ export default function HomePage() {
         setRecommendLoading(false);
       }
     },
-    [selectedMoodId, selectedPlatformIds, excludeIds, selectedMediaType],
+    [
+      selectedMoodId,
+      selectedPlatformIds,
+      excludeIds,
+      selectedMediaType,
+      selectedRefineGenreId,
+    ],
   );
 
   const handleRollAgain = useCallback(() => {
@@ -517,6 +551,8 @@ export default function HomePage() {
     setPickResult(null);
     setTrailerUrl(null);
     setRecommendError(null);
+    setSelectedRefineGenreId(null);
+    setSelectedRefineLabel(null);
     setExcludeIds([]);
     if (typeof window !== "undefined") {
       localStorage.removeItem(STORAGE_KEYS.lastPick);
@@ -641,6 +677,9 @@ export default function HomePage() {
   };
 
   const selectedMoodIds = selectedMoodId ? [selectedMoodId] : [];
+  const refineGenreOptions = selectedMoodId
+    ? MOOD_REFINE_GENRES[selectedMoodId] ?? []
+    : [];
   const pickDetailHref = pickResult
     ? `/${pickResult.mediaType === "tv" ? "tv" : "movie"}/${pickResult.id}/${movieSlug(pickResult.title)}`
     : null;
@@ -964,13 +1003,48 @@ export default function HomePage() {
                             : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.08] hover:text-white",
                         )}
                       >
-                        <MoodIcon Icon={mood.Icon} selected={selected} size={18} />
+                        <span aria-hidden className="text-base leading-none">
+                          {mood.emoji}
+                        </span>
                         <span className="whitespace-nowrap">{mood.label}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
+
+              {selectedMoodId && refineGenreOptions.length > 0 && (
+                <div className="w-full max-w-3xl">
+                  <p className="mb-2 text-center text-[11px] font-medium tracking-wide text-slate-500">
+                    Refine by genre (optional):
+                  </p>
+                  <div
+                    className="flex flex-wrap justify-center gap-1.5"
+                    role="group"
+                    aria-label="Optional genre refine"
+                  >
+                    {refineGenreOptions.map((genre) => {
+                      const selected = selectedRefineLabel === genre.label;
+                      return (
+                        <button
+                          key={`${genre.label}-${genre.id}`}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => handleRefineGenreToggle(genre)}
+                          className={cn(
+                            "inline-flex min-h-[32px] items-center rounded-md border px-2.5 py-1 text-[11px] font-medium transition",
+                            selected
+                              ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
+                              : "border-white/8 bg-transparent text-slate-500 hover:border-white/15 hover:text-slate-300",
+                          )}
+                        >
+                          {genre.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Platform pills — horizontal scroll on mobile */}
               <div

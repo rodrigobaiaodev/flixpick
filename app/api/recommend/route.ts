@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
-import { isValidMoodSlug } from "@/lib/providers-moods";
+import {
+  getMoodConfig,
+  getMoodExcludeGenreIds,
+  isValidMoodSlug,
+} from "@/lib/providers-moods";
 import {
   buildFullContentPick,
   fetchRecommendCandidates,
 } from "@/lib/tmdb";
-import type { ContentItem, RecommendMediaType } from "@/types/movie";
+import type { ContentItem, MediaType, RecommendMediaType } from "@/types/movie";
 
 export const revalidate = 300;
 
@@ -14,11 +18,14 @@ interface RecommendRequestBody {
   minRating?: number;
   excludeIds?: number[];
   mediaType?: RecommendMediaType;
+  /** Optional genre refinement from homepage pills. */
+  genreId?: number;
 }
 
 interface RecommendResponseBody {
   movie: ContentItem;
   trailerUrl: string | null;
+  mediaType: MediaType;
 }
 
 function pickRandom<T>(items: T[]): T | null {
@@ -26,13 +33,18 @@ function pickRandom<T>(items: T[]): T | null {
   return items[Math.floor(Math.random() * items.length)] ?? null;
 }
 
+function pickWeightedByPopularity(candidates: ContentItem[]): ContentItem | null {
+  const sorted = [...candidates].sort((a, b) => b.popularity - a.popularity);
+  const top = sorted.slice(0, 20);
+  return pickRandom(top);
+}
+
 const VALID_MEDIA_TYPES: RecommendMediaType[] = ["movie", "tv", "both"];
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as RecommendRequestBody;
-    const { mood, providers, excludeIds = [] } = body;
-    const minRating = body.minRating ?? 7.0;
+    const { mood, providers, excludeIds = [], genreId } = body;
     const mediaType: RecommendMediaType = body.mediaType ?? "both";
 
     if (!mood || typeof mood !== "string") {
@@ -67,29 +79,55 @@ export async function POST(request: Request) {
       (id): id is number => typeof id === "number" && id > 0,
     );
 
-    const candidates = await fetchRecommendCandidates(
-      mood,
-      providerIds,
-      mediaType,
+    const moodConfig = getMoodConfig(mood);
+    const minRating = body.minRating ?? moodConfig?.minRating ?? 7.0;
+    const minVotes = moodConfig?.minVotes ?? 500;
+    const excludeGenreIds = getMoodExcludeGenreIds(mood);
+    const refineGenreId =
+      typeof genreId === "number" && genreId > 0 ? genreId : undefined;
+
+    const excludeSet = new Set(
+      excludeIds.filter((id): id is number => typeof id === "number"),
     );
 
-    const excludeSet = new Set(excludeIds);
-    const filtered = candidates.filter(
-      (item) =>
-        item.voteAverage >= minRating && !excludeSet.has(item.id),
-    );
+    async function loadCandidates(voteFloor: number) {
+      const candidates = await fetchRecommendCandidates(
+        mood,
+        providerIds,
+        mediaType,
+        {
+          targetCount: 60,
+          minVotes: voteFloor,
+          minRating,
+          excludeGenreIds,
+          refineGenreId,
+        },
+      );
+
+      return candidates.filter(
+        (item) =>
+          item.voteAverage >= minRating && !excludeSet.has(item.id),
+      );
+    }
+
+    let filtered = await loadCandidates(minVotes);
+
+    // Relax vote threshold if the pool is too small
+    if (filtered.length < 5 && minVotes > 200) {
+      filtered = await loadCandidates(200);
+    }
 
     if (filtered.length === 0) {
       return NextResponse.json(
         {
           error:
-            "No titles matched your filters. Try different platforms, a lower minRating, or fewer exclusions.",
+            "No titles matched your filters. Try different platforms, clear exclusions, or another mood.",
         },
         { status: 404 },
       );
     }
 
-    const picked = pickRandom(filtered);
+    const picked = pickWeightedByPopularity(filtered);
     if (!picked) {
       return NextResponse.json(
         { error: "Unable to select a recommendation." },
@@ -103,7 +141,11 @@ export async function POST(request: Request) {
       mood,
     );
 
-    const payload: RecommendResponseBody = { movie, trailerUrl };
+    const payload: RecommendResponseBody = {
+      movie,
+      trailerUrl,
+      mediaType: movie.mediaType,
+    };
 
     return NextResponse.json(payload, {
       headers: {

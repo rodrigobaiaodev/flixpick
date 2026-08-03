@@ -1,5 +1,7 @@
 import {
+  getMoodExcludeGenreIds,
   getMoodGenreIds,
+  getMoodConfig,
   isWorldCinemaMood,
 } from "@/lib/providers-moods";
 import type {
@@ -23,6 +25,16 @@ const DISCOVER_QUALITY_FILTERS = {
   "popularity.gte": 10,
   "vote_average.gte": 5.5,
 } as const;
+
+export interface MoodDiscoverOptions {
+  minVotes?: number;
+  minRating?: number;
+  excludeGenreIds?: number[];
+  /** When set, narrows discover to this genre (mood refine). */
+  refineGenreId?: number;
+  /** Skip default DISCOVER_QUALITY_FILTERS and use mood thresholds only. */
+  useMoodQuality?: boolean;
+}
 
 type TmdbQueryValue = string | number | boolean | undefined;
 
@@ -394,6 +406,7 @@ function buildDiscoverParams(
   providerIds: number[],
   page: number,
   mediaType: MediaType,
+  options?: MoodDiscoverOptions,
 ): Record<string, TmdbQueryValue> {
   const genreIds = getMoodGenreIds(moodSlug, mediaType);
   const params: Record<string, TmdbQueryValue> = {
@@ -401,11 +414,29 @@ function buildDiscoverParams(
     page,
     sort_by: "popularity.desc",
     include_adult: false,
-    ...DISCOVER_QUALITY_FILTERS,
   };
 
-  if (genreIds.length > 0) {
-    params.with_genres = genreIds.join(",");
+  if (options?.useMoodQuality) {
+    params["vote_count.gte"] = options.minVotes ?? 200;
+    params["vote_average.gte"] = options.minRating ?? 6.5;
+  } else {
+    Object.assign(params, DISCOVER_QUALITY_FILTERS);
+  }
+
+  if (options?.refineGenreId) {
+    params.with_genres = String(options.refineGenreId);
+  } else if (genreIds.length > 0) {
+    // Recommend path uses OR so multi-genre moods stay populated
+    params.with_genres = options?.useMoodQuality
+      ? genreIds.join("|")
+      : genreIds.join(",");
+  }
+
+  const excludeIds =
+    options?.excludeGenreIds ??
+    (options?.useMoodQuality ? getMoodExcludeGenreIds(moodSlug) : []);
+  if (excludeIds.length > 0) {
+    params.without_genres = excludeIds.join(",");
   }
 
   if (providerIds.length > 0) {
@@ -420,10 +451,11 @@ export async function getMoviesByMood(
   moodSlug: string,
   providerIds: number[],
   page = 1,
+  options?: MoodDiscoverOptions,
 ): Promise<MovieSearchResult> {
   const data = await tmdbFetch<TmdbPaginatedResponse<TmdbMovieListItem>>(
     "/discover/movie",
-    buildDiscoverParams(moodSlug, providerIds, page, "movie"),
+    buildDiscoverParams(moodSlug, providerIds, page, "movie", options),
     { next: { revalidate: 300 } },
   );
 
@@ -450,10 +482,11 @@ export async function getTVByMood(
   moodSlug: string,
   providerIds: number[],
   page = 1,
+  options?: MoodDiscoverOptions,
 ): Promise<MovieSearchResult> {
   const data = await tmdbFetch<TmdbPaginatedResponse<TmdbTVListItem>>(
     "/discover/tv",
-    buildDiscoverParams(moodSlug, providerIds, page, "tv"),
+    buildDiscoverParams(moodSlug, providerIds, page, "tv", options),
     { next: { revalidate: 300 } },
   );
 
@@ -662,6 +695,7 @@ async function fetchMoodCandidatesByType(
   providerIds: number[],
   mediaType: MediaType,
   targetCount: number,
+  options?: MoodDiscoverOptions,
 ): Promise<ContentItem[]> {
   const collected: ContentItem[] = [];
   const seenIds = new Set<number>();
@@ -671,8 +705,8 @@ async function fetchMoodCandidatesByType(
   while (collected.length < targetCount && page <= totalPages && page <= 5) {
     const batch =
       mediaType === "tv"
-        ? await getTVByMood(moodSlug, providerIds, page)
-        : await getMoviesByMood(moodSlug, providerIds, page);
+        ? await getTVByMood(moodSlug, providerIds, page, options)
+        : await getMoviesByMood(moodSlug, providerIds, page, options);
     totalPages = batch.totalPages;
 
     for (const item of batch.results) {
@@ -700,22 +734,46 @@ export async function fetchRecommendCandidates(
   moodSlug: string,
   providerIds: number[],
   mediaType: RecommendMediaType = "both",
+  options?: MoodDiscoverOptions & { targetCount?: number },
 ): Promise<ContentItem[]> {
+  const targetCount = options?.targetCount ?? 60;
+  const config = getMoodConfig(moodSlug);
+  const discoverOptions: MoodDiscoverOptions = {
+    useMoodQuality: true,
+    minVotes: options?.minVotes ?? config?.minVotes ?? 500,
+    minRating: options?.minRating ?? config?.minRating ?? 7.0,
+    excludeGenreIds:
+      options?.excludeGenreIds ?? getMoodExcludeGenreIds(moodSlug),
+    refineGenreId: options?.refineGenreId,
+  };
+
   if (mediaType === "both") {
-    const resolvedType: MediaType = Math.random() < 0.5 ? "movie" : "tv";
-    return fetchMoodCandidatesByType(
-      moodSlug,
-      providerIds,
-      resolvedType,
-      40,
-    );
+    const half = Math.ceil(targetCount / 2);
+    const [movies, shows] = await Promise.all([
+      fetchMoodCandidatesByType(
+        moodSlug,
+        providerIds,
+        "movie",
+        half,
+        discoverOptions,
+      ),
+      fetchMoodCandidatesByType(
+        moodSlug,
+        providerIds,
+        "tv",
+        half,
+        discoverOptions,
+      ),
+    ]);
+    return [...movies, ...shows];
   }
 
   return fetchMoodCandidatesByType(
     moodSlug,
     providerIds,
     mediaType,
-    40,
+    targetCount,
+    discoverOptions,
   );
 }
 
