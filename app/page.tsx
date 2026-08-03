@@ -10,7 +10,8 @@ import {
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Clapperboard, ExternalLink, Play, Shuffle, Star, Tv } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clapperboard, ExternalLink, Play, Share2, Shuffle, Star, Tv } from "lucide-react";
+import { createMatch } from "@/actions/createMatch";
 import { AdBanner } from "@/components/shared/AdBanner";
 import { FLIXPICK_MOODS, MoodIcon } from "@/components/shared/MoodButton";
 import {
@@ -207,6 +208,8 @@ export default function HomePage() {
 
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
   const [pickWatchHref, setPickWatchHref] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
 
   const heroBackdrops = useMemo(
     () =>
@@ -221,19 +224,35 @@ export default function HomePage() {
     const savedPlatforms = readJson<string[]>(STORAGE_KEYS.platforms);
     const savedExclude = readJson<number[]>(STORAGE_KEYS.excludeIds);
     const savedPick = readJson<StoredLastPick>(STORAGE_KEYS.lastPick);
+    const moodFromUrl = new URLSearchParams(window.location.search).get("mood");
 
-    if (savedMood && FLIXPICK_MOODS.some((m) => m.id === savedMood)) {
+    if (moodFromUrl && FLIXPICK_MOODS.some((m) => m.id === moodFromUrl)) {
+      setSelectedMoodId(moodFromUrl);
+      setPickResult(null);
+      setTrailerUrl(null);
+      localStorage.removeItem(STORAGE_KEYS.lastPick);
+      requestAnimationFrame(() => {
+        moodSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    } else if (savedMood && FLIXPICK_MOODS.some((m) => m.id === savedMood)) {
       setSelectedMoodId(savedMood);
+      if (savedPick?.movie) {
+        setPickResult(savedPick.movie);
+        setTrailerUrl(savedPick.trailerUrl ?? null);
+      }
+    } else if (savedPick?.movie) {
+      setPickResult(savedPick.movie);
+      setTrailerUrl(savedPick.trailerUrl ?? null);
     }
+
     if (Array.isArray(savedPlatforms)) {
       setSelectedPlatformIds(savedPlatforms);
     }
     if (Array.isArray(savedExclude)) {
       setExcludeIds(savedExclude);
-    }
-    if (savedPick?.movie) {
-      setPickResult(savedPick.movie);
-      setTrailerUrl(savedPick.trailerUrl ?? null);
     }
 
     setHydrated(true);
@@ -510,6 +529,65 @@ export default function HomePage() {
     });
   }, []);
 
+  const showShareToast = useCallback((message: string) => {
+    setShareToast(message);
+    window.setTimeout(() => setShareToast(null), 2500);
+  }, []);
+
+  const handleChallengeFriend = useCallback(async () => {
+    if (!pickResult || !selectedMoodId || shareLoading) return;
+
+    setShareLoading(true);
+    try {
+      const code = await createMatch({
+        contentId: pickResult.id,
+        contentTitle: pickResult.title,
+        posterPath: pickResult.posterPath,
+        backdropPath: pickResult.backdropPath,
+        mood: selectedMoodId,
+        platforms: selectedPlatformIds,
+        mediaType: pickResult.mediaType === "tv" ? "tv" : "movie",
+      });
+
+      const url = `https://flixpick.app/match/${code}`;
+      const message = `FlixPick chose ${pickResult.title} for us tonight 🎬 Do you agree or want to roll your own? ${url}`;
+
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        try {
+          await navigator.share({
+            title: `FlixPick: ${pickResult.title}`,
+            text: message,
+            url,
+          });
+          return;
+        } catch (shareError) {
+          if (
+            shareError instanceof DOMException &&
+            shareError.name === "AbortError"
+          ) {
+            return;
+          }
+          /* fall through to clipboard */
+        }
+      }
+
+      await navigator.clipboard.writeText(message);
+      showShareToast("Link copied!");
+    } catch (error) {
+      showShareToast(
+        error instanceof Error ? error.message : "Could not create share link",
+      );
+    } finally {
+      setShareLoading(false);
+    }
+  }, [
+    pickResult,
+    selectedMoodId,
+    selectedPlatformIds,
+    shareLoading,
+    showShareToast,
+  ]);
+
   const updateTrendingScrollState = useCallback(() => {
     const el = trendingScrollRef.current;
     if (!el) return;
@@ -781,6 +859,15 @@ export default function HomePage() {
                         View Details
                       </Link>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => void handleChallengeFriend()}
+                      disabled={shareLoading || !selectedMoodId}
+                      className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[#e50914]/40 bg-[#e50914]/10 px-6 text-sm font-semibold text-[#ff6b6b] transition hover:border-[#e50914]/60 hover:bg-[#e50914]/20 disabled:opacity-50"
+                    >
+                      <Share2 className="size-4" />
+                      {shareLoading ? "Creating link…" : "🎬 Challenge a Friend"}
+                    </button>
                     <button
                       type="button"
                       onClick={handleRollAgain}
@@ -1140,6 +1227,15 @@ export default function HomePage() {
         youtubeKey={trailerUrl ? youtubeKeyFromUrl(trailerUrl) : null}
         title={pickResult?.title}
       />
+
+      {shareToast && (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-lg border border-white/15 bg-[#12121a] px-4 py-3 text-sm font-medium text-white shadow-xl"
+        >
+          {shareToast}
+        </div>
+      )}
     </div>
   );
 }

@@ -145,7 +145,7 @@ export function MovieCard(props: MovieCardComponentProps) {
   return (
     <article
       className={cn(
-        "group flex w-full flex-col overflow-visible rounded-2xl border border-white/10 bg-[#12121a] shadow-lg",
+        "group flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#12121a] shadow-lg sm:overflow-visible sm:rounded-2xl",
         "transition-all duration-300 hover:border-white/20 hover:shadow-xl hover:shadow-black/40",
         className,
       )}
@@ -158,16 +158,16 @@ export function MovieCard(props: MovieCardComponentProps) {
           src={posterUrl}
           alt={`${movie.title} poster`}
           fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           loading={priority ? "eager" : "lazy"}
           priority={priority}
           unoptimized={posterUrl.startsWith("https://")}
         />
 
-        {/* Synopsis overlay on hover */}
+        {/* Synopsis overlay — hover on desktop only */}
         {movie.overview && (
-          <div className="absolute inset-0 flex items-end bg-black/85 p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <div className="pointer-events-none absolute inset-0 hidden items-end bg-black/85 p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 md:flex">
             <p className="line-clamp-6 text-xs leading-relaxed text-slate-200">
               {movie.overview}
             </p>
@@ -208,22 +208,22 @@ export function MovieCard(props: MovieCardComponentProps) {
         />
 
         {/* Title overlay — bottom gradient */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-3 pb-3 pt-12">
-          <h3 className="line-clamp-3 font-[family-name:var(--font-display)] text-sm font-bold leading-snug tracking-wide text-white">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-2 pb-2 pt-10 sm:px-3 sm:pb-3 sm:pt-12">
+          <h3 className="line-clamp-2 font-[family-name:var(--font-display)] text-xs font-bold leading-snug tracking-wide text-white sm:line-clamp-3 sm:text-sm">
             {movie.title}
           </h3>
         </div>
       </Link>
 
-      <div className="flex flex-col gap-2 p-3">
-        <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+      <div className="flex flex-col gap-1.5 p-2 sm:gap-2 sm:p-3">
+        <div className="flex flex-wrap items-center gap-1 text-[10px] text-slate-400 sm:gap-1.5 sm:text-xs">
           <span>{metaLabel}</span>
           <span className="text-white/20">•</span>
           <StarRating rating={movie.voteAverage} />
           {primaryGenre && (
             <>
-              <span className="text-white/20">•</span>
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-slate-300">
+              <span className="hidden text-white/20 sm:inline">•</span>
+              <span className="hidden rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-slate-300 sm:inline">
                 {getGenreDisplayName(primaryGenre.id, primaryGenre.name)}
               </span>
             </>
@@ -231,20 +231,20 @@ export function MovieCard(props: MovieCardComponentProps) {
         </div>
 
         {!hideActions && (
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 sm:gap-2">
             <a
               href={watchHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-compact flex min-h-[44px] flex-1 items-center justify-center rounded-lg bg-[#e50914] text-xs font-semibold text-white transition-colors hover:bg-[#f6121d]"
+              className="btn-compact flex min-h-[40px] flex-1 items-center justify-center rounded-lg bg-[#e50914] text-[11px] font-semibold text-white transition-colors hover:bg-[#f6121d] sm:min-h-[44px] sm:text-xs"
             >
               ▶ Watch
             </a>
             <Link
               href={detailHref}
-              className="btn-compact flex min-h-[44px] flex-1 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-xs font-medium text-slate-200 transition-colors hover:border-white/25 hover:bg-white/10"
+              className="btn-compact flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-[11px] font-medium text-slate-200 transition-colors hover:border-white/25 hover:bg-white/10 sm:min-h-[44px] sm:text-xs"
             >
-              ℹ Details
+              Details
             </Link>
           </div>
         )}

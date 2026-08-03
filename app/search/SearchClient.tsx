@@ -47,8 +47,11 @@ export function SearchClient() {
   const [providerFilter, setProviderFilter] = useState(initialProvider);
   const [results, setResults] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalResults, setTotalResults] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const activeQuery = searchParams.get("q")?.trim() ?? "";
 
@@ -78,6 +81,8 @@ export function SearchClient() {
     if (!activeQuery) {
       setResults([]);
       setTotalResults(0);
+      setPage(1);
+      setTotalPages(1);
       return;
     }
 
@@ -88,7 +93,10 @@ export function SearchClient() {
       setError(null);
 
       try {
-        const params = new URLSearchParams({ q: activeQuery });
+        const params = new URLSearchParams({
+          q: activeQuery,
+          page: "1",
+        });
         if (mediaFilter !== "all") params.set("mediaType", mediaFilter);
         if (providerFilter) params.set("provider", providerFilter);
 
@@ -102,6 +110,8 @@ export function SearchClient() {
         if (!cancelled) {
           setResults(data.results);
           setTotalResults(data.totalResults);
+          setPage(data.page);
+          setTotalPages(data.totalPages);
         }
       } catch (err) {
         if (!cancelled) {
@@ -120,6 +130,35 @@ export function SearchClient() {
     };
   }, [activeQuery, mediaFilter, providerFilter]);
 
+  const handleLoadMore = async () => {
+    if (!activeQuery || page >= totalPages || loadingMore) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const nextPage = page + 1;
+      const params = new URLSearchParams({
+        q: activeQuery,
+        page: String(nextPage),
+      });
+      if (mediaFilter !== "all") params.set("mediaType", mediaFilter);
+      if (providerFilter) params.set("provider", providerFilter);
+
+      const response = await fetch(`/api/search?${params.toString()}`);
+      const data = (await response.json()) as SearchResponse;
+      if (!response.ok) {
+        throw new Error(data.error ?? "Failed to load more");
+      }
+      setResults((prev) => [...prev, ...data.results]);
+      setPage(data.page);
+      setTotalPages(data.totalPages);
+      setTotalResults(data.totalResults);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load more");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   function handleSearchSubmit(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = queryInput.trim();
@@ -128,13 +167,13 @@ export function SearchClient() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#0a0a0f] px-3 py-8 sm:px-6 sm:py-10 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <header className="mb-8">
           <h1 className="font-[family-name:var(--font-display)] text-3xl tracking-wide text-white sm:text-4xl">
             Search
           </h1>
-          <p className="mt-2 text-slate-400">
+          <p className="mt-2 text-sm text-slate-400 sm:text-base">
             Find movies and TV shows across streaming platforms.
           </p>
         </header>
@@ -280,7 +319,7 @@ export function SearchClient() {
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {loading &&
             Array.from({ length: 12 }).map((_, index) => (
               <MovieCardSkeleton key={`search-skeleton-${index}`} />
@@ -301,6 +340,19 @@ export function SearchClient() {
           <p className="py-12 text-center text-slate-500">
             No titles matched your search. Try another keyword or filter.
           </p>
+        )}
+
+        {!loading && activeQuery && page < totalPages && !providerFilter && (
+          <div className="mt-10 flex justify-center">
+            <button
+              type="button"
+              onClick={() => void handleLoadMore()}
+              disabled={loadingMore}
+              className="inline-flex h-12 w-full max-w-sm items-center justify-center rounded-lg bg-[#e50914] px-8 text-sm font-semibold text-white transition hover:bg-[#f6121d] disabled:opacity-50 sm:w-auto"
+            >
+              {loadingMore ? "Loading…" : "Load More"}
+            </button>
+          </div>
         )}
       </div>
     </div>

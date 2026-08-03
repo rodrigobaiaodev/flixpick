@@ -452,7 +452,7 @@ export function ContentDetailLayout({
               <h2 className="border-l-4 border-[#e50914] pl-4 font-[family-name:var(--font-display)] text-2xl tracking-wide text-white shadow-[0_0_12px_rgba(229,9,20,0.4)]">
                 {similarSectionTitle}
               </h2>
-              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                 {similar.map((item) => (
                   <MovieCard key={item.id} movie={item} showAvailability />
                 ))}

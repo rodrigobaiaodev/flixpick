@@ -45,6 +45,48 @@ export interface Database {
         };
         Relationships: [];
       };
+      matches: {
+        Row: {
+          id: string;
+          code: string;
+          movie_id: number;
+          movie_title: string;
+          poster_path: string | null;
+          backdrop_path: string | null;
+          mood: string;
+          platforms: string[] | null;
+          media_type: string | null;
+          share_count: number | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          movie_id: number;
+          movie_title: string;
+          poster_path?: string | null;
+          backdrop_path?: string | null;
+          mood: string;
+          platforms?: string[] | null;
+          media_type?: string | null;
+          share_count?: number | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          movie_id?: number;
+          movie_title?: string;
+          poster_path?: string | null;
+          backdrop_path?: string | null;
+          mood?: string;
+          platforms?: string[] | null;
+          media_type?: string | null;
+          share_count?: number | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

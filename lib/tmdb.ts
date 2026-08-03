@@ -793,7 +793,7 @@ export async function browseDiscoverMovies(options: {
     page,
     sort_by: MOVIE_SORT_MAP[sort],
     include_adult: false,
-    "vote_count.gte": 50,
+    "vote_count.gte": 20,
   };
 
   if (genreId) params.with_genres = String(genreId);
@@ -823,7 +823,7 @@ export async function browseDiscoverTV(options: {
     page,
     sort_by: TV_SORT_MAP[sort],
     include_adult: false,
-    "vote_count.gte": 50,
+    "vote_count.gte": 20,
   };
 
   if (genreId) params.with_genres = String(genreId);
@@ -860,7 +860,7 @@ export async function browseByProvider(options: {
     include_adult: false,
     with_watch_providers: providerQuery,
     with_watch_monetization_types: "flatrate|free|ads",
-    "vote_count.gte": 50,
+    "vote_count.gte": 20,
   };
 
   if (moodSlug) {

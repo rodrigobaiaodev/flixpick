@@ -1,9 +1,11 @@
 import Link from "next/link";
 
 const footerLinks = [
-  { href: "/privacy-policy", label: "Privacy Policy" },
-  { href: "/terms-of-service", label: "Terms of Service" },
   { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
+  { href: "/privacy-policy", label: "Privacy Policy" },
+  { href: "/cookie-policy", label: "Cookies" },
+  { href: "/terms-of-service", label: "Terms of Service" },
 ] as const;
 
 export function Footer() {
@@ -15,10 +17,13 @@ export function Footer() {
         <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
           <p className="font-[family-name:var(--font-display)] text-xl tracking-wide text-slate-100">
             Flix<span className="text-[#e50914]">Pick</span>
+            <span className="ml-2 text-sm font-normal text-slate-500">
+              flixpick.app
+            </span>
           </p>
 
           <nav aria-label="Footer navigation">
-            <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
               {footerLinks.map(({ href, label }) => (
                 <li key={href}>
                   <Link
@@ -34,7 +39,7 @@ export function Footer() {
         </div>
 
         <p className="mt-8 text-center text-sm text-slate-500">
-          &copy; {year} FlixPick. All rights reserved. flixpick.app
+          &copy; {year} flixpick.app. All rights reserved.
         </p>
       </div>
     </footer>
