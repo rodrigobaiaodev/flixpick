@@ -160,6 +160,47 @@ export async function updateStatus(
   return data as UserListItem;
 }
 
+export async function updateWatchProgress(
+  contentId: number,
+  contentType: "movie" | "tv",
+  season: number | null,
+  episode: number | null,
+): Promise<UserListItem> {
+  const userId = await getAuthenticatedUserId();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("user_lists")
+    .update({
+      watch_season: season,
+      watch_episode: episode,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId)
+    .eq("content_id", contentId)
+    .eq("content_type", contentType)
+    .select()
+    .single();
+
+  if (error) {
+    if (isMissingUserListsTableError(error.message)) {
+      throw new Error(
+        "Your watchlist database is not set up yet. Please run the SQL migration in Supabase.",
+      );
+    }
+    const lower = error.message.toLowerCase();
+    if (lower.includes("watch_season") || lower.includes("watch_episode")) {
+      throw new Error(
+        "Episode tracking requires a database update. Run supabase/migrations/watch_progress.sql in Supabase.",
+      );
+    }
+    throw new Error(error.message);
+  }
+
+  revalidateListPages();
+  return data as UserListItem;
+}
+
 export async function getListItemStatus(
   contentId: number,
   contentType: "movie" | "tv",

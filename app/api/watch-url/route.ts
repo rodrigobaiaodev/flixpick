@@ -10,6 +10,10 @@ export async function GET(request: Request) {
     const id = Number(searchParams.get("id"));
     const title = searchParams.get("title");
     const mediaType = (searchParams.get("mediaType") ?? "movie") as MediaType;
+    const platformsParam = searchParams.get("platforms");
+    const preferredPlatformSlugs = platformsParam
+      ? platformsParam.split(",").filter(Boolean)
+      : undefined;
 
     if (!id || Number.isNaN(id) || !title) {
       return NextResponse.json(
@@ -22,7 +26,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Invalid mediaType" }, { status: 400 });
     }
 
-    const url = await resolveWhereToWatchUrl(mediaType, id, title);
+    const url = await resolveWhereToWatchUrl(mediaType, id, title, {
+      preferredPlatformSlugs,
+    });
 
     return NextResponse.json(
       { url },

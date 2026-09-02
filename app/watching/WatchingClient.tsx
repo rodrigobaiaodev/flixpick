@@ -3,17 +3,27 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Check, Play, Tv } from "lucide-react";
+import { Check, ChevronRight, Play, Tv } from "lucide-react";
 import { updateStatus } from "@/actions/listActions";
 import { ListDbSetupBanner } from "@/components/shared/ListDbSetupBanner";
 import { movieSlug } from "@/lib/genres";
+import {
+  computeTVProgressPercent,
+  formatWatchProgress,
+} from "@/lib/watch-progress";
 import type { UserListItem } from "@/types/list";
 import { cn } from "@/lib/utils";
+
+interface SeasonEpisodeCount {
+  seasonNumber: number;
+  episodeCount: number;
+}
 
 interface TVProgressInfo {
   contentId: number;
   numberOfSeasons: number | null;
   numberOfEpisodes: number | null;
+  seasons: SeasonEpisodeCount[];
 }
 
 interface WatchingClientProps {
@@ -50,7 +60,6 @@ export function WatchingClient({
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
-      {/* Hero */}
       <section className="border-b border-white/5 bg-gradient-to-b from-amber-500/10 to-transparent px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
@@ -71,8 +80,8 @@ export function WatchingClient({
         {!dbReady && <ListDbSetupBanner className="mb-10" />}
 
         {items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-8 py-20 text-center">
-            <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-amber-500/10">
+          <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.02] px-8 py-20 text-center">
+            <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-amber-500/10">
               <Play className="size-8 text-amber-400" />
             </div>
             <p className="text-xl font-semibold text-slate-200">
@@ -86,13 +95,13 @@ export function WatchingClient({
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 href="/browse"
-                className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#e50914] px-8 text-sm font-semibold text-white shadow-lg shadow-[#e50914]/25 hover:bg-[#f6121d]"
+                className="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-[#e50914] px-8 text-sm font-semibold text-white shadow-lg shadow-[#e50914]/25 hover:bg-[#f6121d]"
               >
                 Find Something to Watch
               </Link>
               <Link
                 href="/my-list"
-                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 px-8 text-sm font-medium text-slate-300 hover:bg-white/5"
+                className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/15 px-8 text-sm font-medium text-slate-300 hover:bg-white/5"
               >
                 Go to My List
               </Link>
@@ -112,19 +121,37 @@ export function WatchingClient({
                 item.content_type === "tv"
                   ? progressMap.get(item.content_id)
                   : null;
+
+              const progressLabel = formatWatchProgress(
+                item.watch_season ?? null,
+                item.watch_episode ?? null,
+              );
+
               const progressPercent =
-                tvInfo?.numberOfEpisodes && tvInfo.numberOfEpisodes > 0
-                  ? Math.min(85, 20 + Math.round(tvInfo.numberOfEpisodes / 2))
+                item.content_type === "tv" && tvInfo
+                  ? computeTVProgressPercent(
+                      tvInfo.numberOfEpisodes ?? 0,
+                      tvInfo.seasons,
+                      item.watch_season ?? null,
+                      item.watch_episode ?? null,
+                    )
                   : item.content_type === "movie"
-                    ? 45
-                    : 35;
+                    ? item.watch_episode
+                      ? Math.min(100, item.watch_episode)
+                      : 0
+                    : 5;
+
+              const trackHref =
+                item.content_type === "tv"
+                  ? `/watching/track/${item.content_id}`
+                  : null;
 
               return (
                 <article
                   key={item.id}
-                  className="group overflow-hidden rounded-2xl border border-white/10 bg-[#12121a] transition hover:border-amber-500/30 hover:shadow-xl hover:shadow-amber-500/5"
+                  className="group overflow-hidden rounded-3xl border border-white/10 bg-[#12121a] transition hover:border-amber-500/30 hover:shadow-xl hover:shadow-amber-500/5"
                 >
-                  <div className="relative h-32 overflow-hidden sm:h-36">
+                  <div className="relative h-36 overflow-hidden sm:h-40">
                     {backdropUrl ? (
                       <Image
                         src={backdropUrl}
@@ -138,15 +165,20 @@ export function WatchingClient({
                       <div className="size-full bg-gradient-to-r from-amber-900/40 to-[#12121a]" />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#12121a] via-[#12121a]/60 to-transparent" />
-                    <span className="absolute left-4 top-4 rounded-full border border-amber-500/40 bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-200">
+                    <span className="absolute left-4 top-4 rounded-2xl border border-amber-500/40 bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-200">
                       ▶ In Progress
                     </span>
+                    {progressLabel && (
+                      <span className="absolute right-4 top-4 rounded-2xl border border-white/15 bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                        {progressLabel}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex gap-4 p-5 sm:p-6">
                     <Link
                       href={detailHref}
-                      className="relative -mt-14 aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-xl border-2 border-white/15 shadow-2xl sm:w-28"
+                      className="relative -mt-14 aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-2xl border-2 border-white/15 shadow-2xl sm:w-28"
                     >
                       {posterUrl ? (
                         <Image
@@ -200,7 +232,7 @@ export function WatchingClient({
                             {progressPercent}%
                           </span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all"
                             style={{ width: `${progressPercent}%` }}
@@ -208,19 +240,31 @@ export function WatchingClient({
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => void markWatched(item)}
-                        disabled={updatingId === item.id}
-                        className={cn(
-                          "mt-5 flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50",
+                      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                        {trackHref && (
+                          <Link
+                            href={trackHref}
+                            className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-sm font-semibold text-amber-200 transition hover:bg-amber-500/20"
+                          >
+                            {progressLabel ? "Update episode" : "Set episode"}
+                            <ChevronRight className="size-4" />
+                          </Link>
                         )}
-                      >
-                        <Check className="size-4" />
-                        {updatingId === item.id
-                          ? "Updating…"
-                          : "Mark as Watched"}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => void markWatched(item)}
+                          disabled={updatingId === item.id}
+                          className={cn(
+                            "flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50",
+                            !trackHref && "w-full",
+                          )}
+                        >
+                          <Check className="size-4" />
+                          {updatingId === item.id
+                            ? "Updating…"
+                            : "Mark as Watched"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </article>

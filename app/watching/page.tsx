@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUserListSafe } from "@/actions/listActions";
 import { ensureUserListsTable } from "@/lib/ensure-user-lists-table";
-import { getTVDetails } from "@/lib/tmdb";
+import { getTVSeasonsSummary } from "@/lib/tmdb";
 import { createClient } from "@/lib/supabase-server";
 import { WatchingClient } from "./WatchingClient";
 
@@ -28,17 +28,19 @@ export default async function WatchingPage() {
       .filter((i) => i.content_type === "tv")
       .map(async (item) => {
         try {
-          const details = await getTVDetails(item.content_id);
+          const summary = await getTVSeasonsSummary(item.content_id);
           return {
             contentId: item.content_id,
-            numberOfSeasons: details.numberOfSeasons,
-            numberOfEpisodes: details.numberOfEpisodes,
+            numberOfSeasons: summary.numberOfSeasons,
+            numberOfEpisodes: summary.numberOfEpisodes,
+            seasons: summary.seasons,
           };
         } catch {
           return {
             contentId: item.content_id,
             numberOfSeasons: null,
             numberOfEpisodes: null,
+            seasons: [],
           };
         }
       }),

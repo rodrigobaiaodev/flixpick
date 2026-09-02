@@ -29,3 +29,11 @@ create policy "Public can insert matches"
   with check (true);
 
 create index if not exists matches_code_idx on matches (code);
+
+-- If the table already existed with missing columns, run these:
+alter table public.matches add column if not exists poster_path text;
+alter table public.matches add column if not exists backdrop_path text;
+alter table public.matches add column if not exists platforms text[];
+alter table public.matches add column if not exists media_type text default 'movie';
+alter table public.matches add column if not exists share_count integer default 0;
+alter table public.matches add column if not exists created_at timestamp with time zone default now();

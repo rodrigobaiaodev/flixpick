@@ -1,6 +1,10 @@
 "use server";
 
-import { createClient } from "@/lib/supabase-server";
+import {
+  checkMatchesTableExists,
+  ensureMatchesTable,
+} from "@/lib/ensure-matches-table";
+import { createServiceSupabase } from "@/lib/supabase-service";
 
 export interface CreateMatchInput {
   contentId: number;
@@ -24,7 +28,9 @@ function generateMatchCode(): string {
   return code;
 }
 
-export async function createMatch(input: CreateMatchInput): Promise<string> {
+export async function createMatch(
+  input: CreateMatchInput,
+): Promise<{ code: string } | { error: string }> {
   const {
     contentId,
     contentTitle,
@@ -36,36 +42,60 @@ export async function createMatch(input: CreateMatchInput): Promise<string> {
   } = input;
 
   if (!contentId || !contentTitle?.trim() || !mood?.trim()) {
-    throw new Error("Missing required match fields");
+    return { error: "Missing required match fields" };
   }
 
-  const supabase = await createClient();
-
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-    const code = generateMatchCode();
-
-    const { error } = await supabase.from("matches").insert({
-      code,
-      movie_id: contentId,
-      movie_title: contentTitle.trim(),
-      poster_path: posterPath,
-      backdrop_path: backdropPath,
-      mood: mood.trim(),
-      platforms,
-      media_type: mediaType === "tv" ? "tv" : "movie",
-    });
-
-    if (!error) {
-      return code;
+  try {
+    let tableReady = await checkMatchesTableExists();
+    if (!tableReady) {
+      tableReady = await ensureMatchesTable();
+    }
+    if (!tableReady) {
+      return {
+        error:
+          "Share is not ready. Run matches.sql in Supabase or add SUPABASE_DB_PASSWORD.",
+      };
     }
 
-    // Unique violation — try another code
-    if (error.code === "23505") {
-      continue;
+    const supabase = createServiceSupabase();
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+      const code = generateMatchCode();
+
+      const { error } = await supabase.from("matches").insert({
+        code,
+        movie_id: contentId,
+        movie_title: contentTitle.trim(),
+        poster_path: posterPath,
+        backdrop_path: backdropPath,
+        mood: mood.trim(),
+        platforms,
+        media_type: mediaType === "tv" ? "tv" : "movie",
+      });
+
+      if (!error) {
+        return { code };
+      }
+
+      if (error.code === "23505") {
+        continue;
+      }
+
+      if (error.code === "42P01") {
+        return {
+          error:
+            "Share is not configured yet. Run the matches migration in Supabase.",
+        };
+      }
+
+      return { error: error.message || "Failed to create match" };
     }
 
-    throw new Error(error.message || "Failed to create match");
+    return { error: "Could not generate a unique match code" };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to create match",
+    };
   }
-
-  throw new Error("Could not generate a unique match code");
 }

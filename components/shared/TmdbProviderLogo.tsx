@@ -24,6 +24,8 @@ interface TmdbProviderLogoProps {
   size?: number;
   className?: string;
   selected?: boolean;
+  /** Avoid scale transform that clips on mobile scroll rows */
+  disableScale?: boolean;
 }
 
 function ProviderFallback({
@@ -61,6 +63,7 @@ export function TmdbProviderLogo({
   size = 40,
   className,
   selected = false,
+  disableScale = false,
 }: TmdbProviderLogoProps) {
   const src =
     logoUrl ?? (logoPath ? buildTmdbLogoUrl(logoPath) : null);
@@ -85,7 +88,9 @@ export function TmdbProviderLogo({
       className={cn(
         "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border",
         selected
-          ? "scale-110 border-white/40 shadow-lg ring-2 ring-white"
+          ? disableScale
+            ? "border-white/40"
+            : "scale-110 border-white/40 shadow-lg ring-2 ring-white"
           : "border-white/15",
         !src && !textFallback && "bg-[#12121a]",
         className,

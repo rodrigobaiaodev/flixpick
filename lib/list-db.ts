@@ -20,10 +20,15 @@ create table if not exists public.user_lists (
   backdrop_path text,
   rating numeric,
   status text not null check (status in ('want_to_watch', 'watching', 'watched', 'loved')),
+  watch_season integer,
+  watch_episode integer,
   added_at timestamptz default now(),
   updated_at timestamptz default now(),
   unique(user_id, content_id, content_type)
 );
+
+alter table public.user_lists add column if not exists watch_season integer;
+alter table public.user_lists add column if not exists watch_episode integer;
 
 alter table public.user_lists enable row level security;
 

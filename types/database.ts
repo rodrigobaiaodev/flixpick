@@ -14,6 +14,8 @@ export interface Database {
           backdrop_path: string | null;
           rating: number | null;
           status: ListStatus;
+          watch_season: number | null;
+          watch_episode: number | null;
           added_at: string;
           updated_at: string;
         };
@@ -27,6 +29,8 @@ export interface Database {
           backdrop_path?: string | null;
           rating?: number | null;
           status: ListStatus;
+          watch_season?: number | null;
+          watch_episode?: number | null;
           added_at?: string;
           updated_at?: string;
         };
@@ -40,6 +44,8 @@ export interface Database {
           backdrop_path?: string | null;
           rating?: number | null;
           status?: ListStatus;
+          watch_season?: number | null;
+          watch_episode?: number | null;
           added_at?: string;
           updated_at?: string;
         };

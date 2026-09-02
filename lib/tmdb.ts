@@ -525,6 +525,36 @@ export async function getTVDetails(tvId: number): Promise<ContentItem> {
   return mapTmdbTVToContentItem(data);
 }
 
+export interface TVSeasonSummary {
+  seasonNumber: number;
+  episodeCount: number;
+}
+
+interface TmdbTVDetailsWithSeasons extends TmdbTVDetails {
+  seasons?: { season_number: number; episode_count: number }[];
+}
+
+export async function getTVSeasonsSummary(tvId: number): Promise<{
+  numberOfSeasons: number | null;
+  numberOfEpisodes: number | null;
+  seasons: TVSeasonSummary[];
+}> {
+  const data = await tmdbFetch<TmdbTVDetailsWithSeasons>(`/tv/${tvId}`, {
+    watch_region: WATCH_REGION,
+  });
+
+  return {
+    numberOfSeasons: data.number_of_seasons ?? null,
+    numberOfEpisodes: data.number_of_episodes ?? null,
+    seasons: (data.seasons ?? [])
+      .filter((s) => s.season_number > 0)
+      .map((s) => ({
+        seasonNumber: s.season_number,
+        episodeCount: s.episode_count,
+      })),
+  };
+}
+
 export async function getWatchProviders(
   movieId: number,
 ): Promise<MovieAvailability[]> {
@@ -667,6 +697,15 @@ async function getTrailerUrl(
   mediaType: MediaType,
   id: number,
 ): Promise<string | null> {
+  const key = await getTrailerYoutubeKey(mediaType, id);
+  if (!key) return null;
+  return `https://www.youtube.com/watch?v=${key}`;
+}
+
+export async function getTrailerYoutubeKey(
+  mediaType: MediaType,
+  id: number,
+): Promise<string | null> {
   const path = mediaType === "tv" ? `/tv/${id}/videos` : `/movie/${id}/videos`;
   const data = await tmdbFetch<TmdbVideosResponse>(path);
 
@@ -679,8 +718,67 @@ async function getTrailerUrl(
     ) ??
     data.results.find((v) => v.site === "YouTube" && v.type === "Trailer");
 
-  if (!trailer?.key) return null;
-  return `https://www.youtube.com/watch?v=${trailer.key}`;
+  return trailer?.key ?? null;
+}
+
+export interface TVSeasonEpisode {
+  id: number;
+  episodeNumber: number;
+  name: string;
+  overview: string;
+  stillPath: string | null;
+  airDate: string;
+  runtimeMinutes: number | null;
+}
+
+export interface TVSeasonDetails {
+  seasonNumber: number;
+  name: string;
+  posterPath: string | null;
+  episodes: TVSeasonEpisode[];
+}
+
+interface TmdbSeasonEpisode {
+  id: number;
+  episode_number: number;
+  name: string;
+  overview: string;
+  still_path: string | null;
+  air_date: string;
+  runtime: number | null;
+}
+
+interface TmdbSeasonDetailsResponse {
+  season_number: number;
+  name: string;
+  poster_path: string | null;
+  episodes: TmdbSeasonEpisode[];
+}
+
+export async function getTVSeason(
+  tvId: number,
+  seasonNumber: number,
+): Promise<TVSeasonDetails> {
+  const data = await tmdbFetch<TmdbSeasonDetailsResponse>(
+    `/tv/${tvId}/season/${seasonNumber}`,
+    undefined,
+    { next: { revalidate: 86400 } },
+  );
+
+  return {
+    seasonNumber: data.season_number,
+    name: data.name,
+    posterPath: data.poster_path,
+    episodes: data.episodes.map((ep) => ({
+      id: ep.id,
+      episodeNumber: ep.episode_number,
+      name: ep.name,
+      overview: ep.overview,
+      stillPath: ep.still_path,
+      airDate: ep.air_date,
+      runtimeMinutes: ep.runtime,
+    })),
+  };
 }
 
 export async function getMovieTrailerUrl(

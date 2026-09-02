@@ -1,24 +1,18 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Clapperboard, ExternalLink, Play, Share2, Shuffle, Star, Tv } from "lucide-react";
-import { createMatch } from "@/actions/createMatch";
+import { usePathname } from "next/navigation";
+import { Clapperboard, ExternalLink, Play, Share2, Shuffle, Star, Tv } from "lucide-react";
 import { AdBanner } from "@/components/shared/AdBanner";
+import { TopTrailersSection } from "@/components/home/TopTrailersSection";
+import { TrendingSection } from "@/components/home/TrendingSection";
 import { FLIXPICK_MOODS, MoodIcon } from "@/components/shared/MoodButton";
+import { ShareChallengeModal } from "@/components/shared/ShareChallengeModal";
 import {
   getGenreDisplayName,
   movieSlug,
-  MovieCard,
-  MovieCardSkeleton,
 } from "@/components/shared/MovieCard";
 import {
   STREAMING_PLATFORMS,
@@ -31,6 +25,11 @@ import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
 import { RouletteWheel } from "@/components/shared/RouletteWheel";
 import { TrailerModal } from "@/components/shared/TrailerModal";
 import { getWhereToWatchUrlForMovie } from "@/lib/watch-links";
+import {
+  buildChallengeMessage,
+  buildContentShareUrl,
+  buildMatchShareUrl,
+} from "@/lib/share-challenge";
 import { cn } from "@/lib/utils";
 import type { ContentItem, RecommendMediaType } from "@/types/movie";
 import type { LucideIcon } from "lucide-react";
@@ -66,10 +65,6 @@ interface TrendingResponse {
   movies: ContentItem[];
   page: number;
   totalResults: number;
-}
-
-interface FeaturedResponse {
-  movies: ContentItem[];
 }
 
 interface StoredLastPick {
@@ -174,11 +169,12 @@ function SectionReveal({
 }
 
 export default function HomePage() {
+  const pathname = usePathname();
   const moodSectionRef = useRef<HTMLDivElement>(null);
+  const refineSectionRef = useRef<HTMLDivElement>(null);
   const platformSectionRef = useRef<HTMLDivElement>(null);
   const rouletteSectionRef = useRef<HTMLDivElement>(null);
   const rouletteRef = useRef<HTMLDivElement>(null);
-  const trendingScrollRef = useRef<HTMLDivElement>(null);
 
   const [hydrated, setHydrated] = useState(false);
   const [selectedMoodId, setSelectedMoodId] = useState<string | null>(null);
@@ -205,19 +201,21 @@ export default function HomePage() {
   const [trendingMovies, setTrendingMovies] = useState<ContentItem[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(true);
   const [trendingError, setTrendingError] = useState<string | null>(null);
-  const [trendingScroll, setTrendingScroll] = useState({
-    canScrollLeft: false,
-    canScrollRight: false,
-  });
-
-  const [featuredMovies, setFeaturedMovies] = useState<ContentItem[]>([]);
-  const [featuredLoading, setFeaturedLoading] = useState(true);
-  const [featuredError, setFeaturedError] = useState<string | null>(null);
 
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
   const [pickWatchHref, setPickWatchHref] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
-  const [shareToast, setShareToast] = useState<string | null>(null);
+  const [shareModal, setShareModal] = useState<{
+    url: string;
+    message: string;
+    title: string;
+    posterPath?: string | null;
+    backdropPath?: string | null;
+    rating?: number;
+    year?: string;
+    moodLabel?: string;
+    mediaType?: "movie" | "tv";
+  } | null>(null);
 
   const heroBackdrops = useMemo(
     () =>
@@ -231,7 +229,6 @@ export default function HomePage() {
     const savedMood = readJson<string>(STORAGE_KEYS.mood);
     const savedPlatforms = readJson<string[]>(STORAGE_KEYS.platforms);
     const savedExclude = readJson<number[]>(STORAGE_KEYS.excludeIds);
-    const savedPick = readJson<StoredLastPick>(STORAGE_KEYS.lastPick);
     const moodFromUrl = new URLSearchParams(window.location.search).get("mood");
 
     if (moodFromUrl && FLIXPICK_MOODS.some((m) => m.id === moodFromUrl)) {
@@ -249,13 +246,6 @@ export default function HomePage() {
       });
     } else if (savedMood && FLIXPICK_MOODS.some((m) => m.id === savedMood)) {
       setSelectedMoodId(savedMood);
-      if (savedPick?.movie) {
-        setPickResult(savedPick.movie);
-        setTrailerUrl(savedPick.trailerUrl ?? null);
-      }
-    } else if (savedPick?.movie) {
-      setPickResult(savedPick.movie);
-      setTrailerUrl(savedPick.trailerUrl ?? null);
     }
 
     if (Array.isArray(savedPlatforms)) {
@@ -267,6 +257,29 @@ export default function HomePage() {
 
     setHydrated(true);
   }, []);
+
+  const prevPathRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (pathname !== "/") {
+      prevPathRef.current = pathname;
+      return;
+    }
+
+    const cameFromAnotherPage =
+      prevPathRef.current !== null && prevPathRef.current !== "/";
+
+    if (cameFromAnotherPage) {
+      setPickResult(null);
+      setTrailerUrl(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(STORAGE_KEYS.lastPick);
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+    }
+
+    prevPathRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -353,41 +366,6 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadFeatured() {
-      setFeaturedLoading(true);
-      setFeaturedError(null);
-      try {
-        const response = await fetch("/api/featured");
-        if (!response.ok) {
-          const body = (await response.json().catch(() => ({}))) as {
-            error?: string;
-          };
-          throw new Error(body.error ?? "Failed to load editor's picks");
-        }
-        const data = (await response.json()) as FeaturedResponse;
-        if (!cancelled) {
-          setFeaturedMovies(data.movies ?? []);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setFeaturedError(
-            error instanceof Error ? error.message : "Something went wrong",
-          );
-        }
-      } finally {
-        if (!cancelled) setFeaturedLoading(false);
-      }
-    }
-
-    void loadFeatured();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
     if (heroBackdrops.length <= 1) return;
     const timer = setInterval(() => {
       setHeroSlideIndex((i) => (i + 1) % heroBackdrops.length);
@@ -402,15 +380,12 @@ export default function HomePage() {
     }
 
     const movie = pickResult;
-    const localUrl = getWhereToWatchUrlForMovie(movie);
-    const hasProviders = movie.availability.some((region) =>
-      region.options.some((o) => o.type === "flatrate"),
+    const localUrl = getWhereToWatchUrlForMovie(
+      movie,
+      selectedPlatformIds.length > 0 ? selectedPlatformIds : undefined,
     );
 
-    if (hasProviders) {
-      setPickWatchHref(localUrl);
-      return;
-    }
+    setPickWatchHref(localUrl);
 
     let cancelled = false;
 
@@ -421,14 +396,17 @@ export default function HomePage() {
           title: movie.title,
           mediaType: movie.mediaType,
         });
+        if (selectedPlatformIds.length > 0) {
+          params.set("platforms", selectedPlatformIds.join(","));
+        }
         const response = await fetch(`/api/watch-url?${params.toString()}`);
         if (!response.ok) return;
         const data = (await response.json()) as { url?: string };
-        if (!cancelled) {
-          setPickWatchHref(data.url ?? localUrl);
+        if (!cancelled && data.url) {
+          setPickWatchHref(data.url);
         }
       } catch {
-        if (!cancelled) setPickWatchHref(localUrl);
+        /* keep localUrl */
       }
     }
 
@@ -436,20 +414,13 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [pickResult]);
+  }, [pickResult, selectedPlatformIds]);
 
   const handleMoodSelect = useCallback((moodId: string) => {
     setSelectedMoodId(moodId);
     setSelectedRefineGenreId(null);
     setSelectedRefineLabel(null);
     setRecommendError(null);
-
-    requestAnimationFrame(() => {
-      platformSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
   }, []);
 
   const handleRefineGenreToggle = useCallback(
@@ -565,97 +536,57 @@ export default function HomePage() {
     });
   }, []);
 
-  const showShareToast = useCallback((message: string) => {
-    setShareToast(message);
-    window.setTimeout(() => setShareToast(null), 2500);
-  }, []);
-
   const handleChallengeFriend = useCallback(async () => {
     if (!pickResult || !selectedMoodId || shareLoading) return;
 
     setShareLoading(true);
+    const origin = window.location.origin;
+    let shareUrl = buildContentShareUrl(origin, pickResult, selectedMoodId);
+
     try {
-      const code = await createMatch({
-        contentId: pickResult.id,
-        contentTitle: pickResult.title,
-        posterPath: pickResult.posterPath,
-        backdropPath: pickResult.backdropPath,
-        mood: selectedMoodId,
-        platforms: selectedPlatformIds,
-        mediaType: pickResult.mediaType === "tv" ? "tv" : "movie",
+      const response = await fetch("/api/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contentId: pickResult.id,
+          contentTitle: pickResult.title,
+          posterPath: pickResult.posterPath,
+          backdropPath: pickResult.backdropPath,
+          mood: selectedMoodId,
+          platforms: selectedPlatformIds,
+          mediaType: pickResult.mediaType === "tv" ? "tv" : "movie",
+        }),
       });
 
-      const url = `https://flixpick.app/match/${code}`;
-      const message = `FlixPick chose ${pickResult.title} for us tonight 🎬 Do you agree or want to roll your own? ${url}`;
+      const data = (await response.json()) as {
+        code?: string;
+        error?: string;
+        fallback?: boolean;
+      };
 
-      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-        try {
-          await navigator.share({
-            title: `FlixPick: ${pickResult.title}`,
-            text: message,
-            url,
-          });
-          return;
-        } catch (shareError) {
-          if (
-            shareError instanceof DOMException &&
-            shareError.name === "AbortError"
-          ) {
-            return;
-          }
-          /* fall through to clipboard */
-        }
+      if (data.code) {
+        shareUrl = buildMatchShareUrl(origin, data.code);
       }
-
-      await navigator.clipboard.writeText(message);
-      showShareToast("Link copied!");
-    } catch (error) {
-      showShareToast(
-        error instanceof Error ? error.message : "Could not create share link",
-      );
-    } finally {
-      setShareLoading(false);
+    } catch {
+      /* use content share URL */
     }
-  }, [
-    pickResult,
-    selectedMoodId,
-    selectedPlatformIds,
-    shareLoading,
-    showShareToast,
-  ]);
 
-  const updateTrendingScrollState = useCallback(() => {
-    const el = trendingScrollRef.current;
-    if (!el) return;
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    setTrendingScroll({
-      canScrollLeft: scrollLeft > 8,
-      canScrollRight: scrollLeft < scrollWidth - clientWidth - 8,
+    const shareMessage = buildChallengeMessage(pickResult.title, shareUrl);
+    const moodLabel = FLIXPICK_MOODS.find((m) => m.id === selectedMoodId)?.label;
+
+    setShareModal({
+      url: shareUrl,
+      message: shareMessage,
+      title: pickResult.title,
+      posterPath: pickResult.posterPath,
+      backdropPath: pickResult.backdropPath,
+      rating: pickResult.voteAverage,
+      year: pickResult.releaseDate?.slice(0, 4),
+      moodLabel,
+      mediaType: pickResult.mediaType === "tv" ? "tv" : "movie",
     });
-  }, []);
-
-  const scrollTrending = useCallback((direction: "left" | "right") => {
-    const el = trendingScrollRef.current;
-    if (!el) return;
-    el.scrollBy({
-      left:
-        direction === "left" ? -el.clientWidth * 0.75 : el.clientWidth * 0.75,
-      behavior: "smooth",
-    });
-  }, []);
-
-  useEffect(() => {
-    updateTrendingScrollState();
-    const el = trendingScrollRef.current;
-    if (!el) return;
-
-    el.addEventListener("scroll", updateTrendingScrollState, { passive: true });
-    window.addEventListener("resize", updateTrendingScrollState);
-    return () => {
-      el.removeEventListener("scroll", updateTrendingScrollState);
-      window.removeEventListener("resize", updateTrendingScrollState);
-    };
-  }, [trendingMovies, trendingLoading, updateTrendingScrollState]);
+    setShareLoading(false);
+  }, [pickResult, selectedMoodId, selectedPlatformIds, shareLoading]);
 
   const allPlatformIds = streamingPlatforms.map((p) => p.id);
   const isAllPlatformsSelected =
@@ -1014,7 +945,7 @@ export default function HomePage() {
               </div>
 
               {selectedMoodId && refineGenreOptions.length > 0 && (
-                <div className="w-full max-w-3xl">
+                <div ref={refineSectionRef} className="w-full max-w-3xl scroll-mt-24">
                   <p className="mb-2 text-center text-[11px] font-medium tracking-wide text-slate-500">
                     Refine by genre (optional):
                   </p>
@@ -1051,8 +982,8 @@ export default function HomePage() {
                 ref={platformSectionRef}
                 className="w-full max-w-3xl scroll-mt-24"
               >
-                <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
-                  <p className="text-xs font-medium uppercase tracking-widest text-slate-500">
+                <div className="mb-3 flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+                  <p className="text-center text-xs font-medium uppercase tracking-widest text-slate-500">
                     Where do you watch?
                   </p>
                   <button
@@ -1060,7 +991,7 @@ export default function HomePage() {
                     onClick={toggleAllPlatforms}
                     aria-pressed={isAllPlatformsSelected}
                     className={cn(
-                      "btn-compact rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition-all",
+                      "btn-compact inline-flex min-h-[32px] items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition-all",
                       isAllPlatformsSelected
                         ? "border-[#e50914]/60 bg-[#e50914]/10 text-[#e50914]"
                         : "border-white/10 text-slate-500 hover:border-white/20 hover:text-slate-300",
@@ -1070,7 +1001,7 @@ export default function HomePage() {
                   </button>
                 </div>
                 <div
-                  className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-center sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
+                  className="flex gap-2 overflow-x-auto px-1 py-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0 sm:py-0 [&::-webkit-scrollbar]:hidden"
                   role="group"
                   aria-label="Streaming platforms"
                 >
@@ -1086,8 +1017,10 @@ export default function HomePage() {
                         title={platform.name}
                         onClick={() => togglePlatform(platform.id)}
                         className={cn(
-                          "btn-compact shrink-0 transition-all",
-                          selected ? "scale-110" : "opacity-70 hover:opacity-100",
+                          "btn-compact flex size-11 shrink-0 items-center justify-center rounded-full p-0.5 transition-all",
+                          selected
+                            ? "bg-white/10 ring-2 ring-[#e50914]/60"
+                            : "opacity-80 hover:opacity-100",
                         )}
                       >
                         <TmdbProviderLogo
@@ -1096,8 +1029,9 @@ export default function HomePage() {
                           tmdbProviderId={platform.tmdbProviderId}
                           fallbackLabel={platform.fallbackLabel}
                           fallbackBackground={platform.fallbackBackground}
-                          size={44}
+                          size={40}
                           selected={selected}
+                          disableScale
                         />
                       </button>
                     );
@@ -1163,127 +1097,16 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Trending */}
-      <SectionReveal className="border-t border-white/5 bg-[#07070b] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-8 flex items-end justify-between gap-4 border-l-4 border-[#e50914] pl-5 shadow-[0_0_20px_rgba(229,9,20,0.35)]">
-            <div>
-              <h2 className="font-[family-name:var(--font-display)] tracking-wide text-slate-100">
-                Trending Now 🔥
-              </h2>
-              <p className="mt-2 max-w-lg text-sm text-slate-500">
-                What everyone&apos;s watching right now.
-              </p>
-            </div>
-          </div>
-
-          {trendingError && (
-            <p
-              role="alert"
-              className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
-            >
-              {trendingError}
-            </p>
-          )}
-
-          <div className="relative">
-            {trendingScroll.canScrollLeft && (
-              <button
-                type="button"
-                onClick={() => scrollTrending("left")}
-                aria-label="Scroll trending left"
-                className="absolute -left-2 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#0a0a0f]/95 text-slate-200 shadow-lg backdrop-blur-sm transition hover:border-white/30 hover:bg-[#12121a] sm:left-0"
-              >
-                <ChevronLeft className="size-5" />
-              </button>
-            )}
-            {trendingScroll.canScrollRight && (
-              <button
-                type="button"
-                onClick={() => scrollTrending("right")}
-                aria-label="Scroll trending right"
-                className="absolute -right-2 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#0a0a0f]/95 text-slate-200 shadow-lg backdrop-blur-sm transition hover:border-white/30 hover:bg-[#12121a] sm:right-0"
-              >
-                <ChevronRight className="size-5" />
-              </button>
-            )}
-
-            <div
-              ref={trendingScrollRef}
-              className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-5 [&::-webkit-scrollbar]:hidden"
-            >
-              {trendingLoading &&
-                Array.from({ length: 6 }).map((_, i) => (
-                  <MovieCardSkeleton
-                    key={`trending-skeleton-${i}`}
-                    className="w-[140px] shrink-0 snap-start sm:w-[180px] md:w-[200px]"
-                  />
-                ))}
-
-              {!trendingLoading &&
-                trendingMovies.map((movie) => (
-                  <MovieCard
-                    key={movie.id}
-                    movie={movie}
-                    showAvailability
-                    className="w-[140px] shrink-0 snap-start sm:w-[180px] md:w-[200px]"
-                  />
-                ))}
-
-              {!trendingLoading &&
-                !trendingError &&
-                trendingMovies.length === 0 && (
-                  <p className="snap-start text-slate-500">
-                    No trending movies right now.
-                  </p>
-                )}
-            </div>
-          </div>
-        </div>
+      <SectionReveal>
+        <TrendingSection
+          movies={trendingMovies}
+          loading={trendingLoading}
+          error={trendingError}
+        />
       </SectionReveal>
 
-      {/* Editor's Picks */}
-      <SectionReveal className="border-t border-white/5 bg-[#0a0a0f] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-8 border-l-4 border-[#e50914] pl-5 shadow-[0_0_20px_rgba(229,9,20,0.35)]">
-            <h2 className="font-[family-name:var(--font-display)] tracking-wide text-slate-100">
-              Editor&apos;s Picks
-            </h2>
-            <p className="mt-2 max-w-lg text-sm text-slate-500">
-              Hand-curated masterpieces — rated 8.0+ by thousands of viewers.
-            </p>
-          </div>
-
-          {featuredError && (
-            <p
-              role="alert"
-              className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
-            >
-              {featuredError}
-            </p>
-          )}
-
-          <div className="flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:grid md:grid-cols-3 md:overflow-visible md:pb-0 lg:grid-cols-3 xl:grid-cols-6 [&::-webkit-scrollbar]:hidden">
-            {featuredLoading &&
-              Array.from({ length: 6 }).map((_, i) => (
-                <MovieCardSkeleton
-                  key={`featured-skeleton-${i}`}
-                  className="w-[140px] shrink-0 snap-start sm:w-[180px] md:w-full md:shrink md:snap-align-none"
-                />
-              ))}
-
-            {!featuredLoading &&
-              featuredMovies.map((movie, index) => (
-                <MovieCard
-                  key={movie.id}
-                  movie={movie}
-                  showAvailability
-                  priority={index < 3}
-                  className="w-[140px] shrink-0 snap-start sm:w-[180px] md:w-full md:shrink md:snap-align-none"
-                />
-              ))}
-          </div>
-        </div>
+      <SectionReveal>
+        <TopTrailersSection />
       </SectionReveal>
 
       {/* Footer ad */}
@@ -1302,14 +1125,19 @@ export default function HomePage() {
         title={pickResult?.title}
       />
 
-      {shareToast && (
-        <div
-          role="status"
-          className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-lg border border-white/15 bg-[#12121a] px-4 py-3 text-sm font-medium text-white shadow-xl"
-        >
-          {shareToast}
-        </div>
-      )}
+      <ShareChallengeModal
+        open={shareModal !== null}
+        onClose={() => setShareModal(null)}
+        title={shareModal?.title ?? ""}
+        shareUrl={shareModal?.url ?? ""}
+        shareMessage={shareModal?.message ?? ""}
+        posterPath={shareModal?.posterPath}
+        backdropPath={shareModal?.backdropPath}
+        rating={shareModal?.rating}
+        year={shareModal?.year}
+        moodLabel={shareModal?.moodLabel}
+        mediaType={shareModal?.mediaType}
+      />
     </div>
   );
 }
