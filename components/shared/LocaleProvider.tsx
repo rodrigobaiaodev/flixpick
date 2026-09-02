@@ -15,12 +15,16 @@ import {
   getLocaleMeta,
   isLocale,
 } from "@/lib/i18n/config";
-import { translate, type TranslationKey } from "@/lib/i18n/messages";
+import {
+  translate,
+  translateWithParams,
+  type TranslationKey,
+} from "@/lib/i18n/messages";
 
 interface LocaleContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
@@ -68,13 +72,18 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     () => ({
       locale,
       setLocale,
-      t: (key) => translate(locale, key),
+      t: (key, params) =>
+        params
+          ? translateWithParams(locale, key, params)
+          : translate(locale, key),
     }),
     [locale, setLocale],
   );
 
   return (
-    <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
+    <LocaleContext.Provider value={value}>
+      <div key={locale}>{children}</div>
+    </LocaleContext.Provider>
   );
 }
 

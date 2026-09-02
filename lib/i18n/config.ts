@@ -4,7 +4,7 @@ export const LOCALES = [
     label: "English",
     shortLabel: "EN",
     region: "US",
-    flag: "🇺🇸",
+    countryCode: "us",
     htmlLang: "en",
   },
   {
@@ -12,7 +12,7 @@ export const LOCALES = [
     label: "Português",
     shortLabel: "PT",
     region: "BR",
-    flag: "🇧🇷",
+    countryCode: "br",
     htmlLang: "pt-BR",
   },
   {
@@ -20,7 +20,7 @@ export const LOCALES = [
     label: "Español",
     shortLabel: "ES",
     region: "ES",
-    flag: "🇪🇸",
+    countryCode: "es",
     htmlLang: "es",
   },
 ] as const;

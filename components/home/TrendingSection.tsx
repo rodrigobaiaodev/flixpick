@@ -10,6 +10,7 @@ import {
   MovieCardSkeleton,
 } from "@/components/shared/MovieCard";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
+import { useTranslations } from "@/components/shared/LocaleProvider";
 import type { ContentItem } from "@/types/movie";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ function TrendingCard({
   movie: ContentItem;
   rank: number;
 }) {
+  const t = useTranslations();
   const posterUrl = movie.posterPath
     ? `https://image.tmdb.org/t/p/w342${movie.posterPath}`
     : null;
@@ -109,7 +111,7 @@ function TrendingCard({
             {movie.popularity > 0 && (
               <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-emerald-400/80">
                 <TrendingUp className="size-3" />
-                Hot this week
+                {t("common.hotThisWeek")}
               </div>
             )}
           </div>
@@ -124,6 +126,7 @@ export function TrendingSection({
   loading,
   error,
 }: TrendingSectionProps) {
+  const t = useTranslations();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scroll, setScroll] = useState({
     canScrollLeft: false,
@@ -170,18 +173,18 @@ export function TrendingSection({
             <div className="flex items-center gap-2">
               <Flame className="size-5 text-[#e50914]" />
               <h2 className="font-[family-name:var(--font-display)] tracking-wide text-slate-100">
-                Trending Now
+                {t("home.trendingTitle")}
               </h2>
             </div>
             <p className="mt-2 max-w-lg text-sm text-slate-500">
-              What everyone&apos;s watching right now — ranked by buzz and ratings.
+              {t("home.trendingDesc")}
             </p>
           </div>
           <Link
             href="/browse"
             className="inline-flex min-h-[40px] items-center justify-center self-start rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:bg-white/[0.06] sm:self-auto"
           >
-            Explore all
+            {t("common.exploreAll")}
           </Link>
         </div>
 

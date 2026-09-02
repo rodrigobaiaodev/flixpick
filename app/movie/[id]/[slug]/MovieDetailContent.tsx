@@ -59,7 +59,6 @@ export function MovieDetailContent({
       trailerKey={trailerKey}
       videos={videos}
       similar={similar}
-      similarSectionTitle="Similar Movies"
       adSlots={{
         top: "3333333331",
         middle: "3333333332",

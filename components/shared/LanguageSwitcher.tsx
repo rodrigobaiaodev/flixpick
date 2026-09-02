@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
+import { CountryFlag } from "@/components/shared/CountryFlag";
 import { LOCALES, type Locale } from "@/lib/i18n/config";
 import { useLocale } from "@/components/shared/LocaleProvider";
 import { cn } from "@/lib/utils";
@@ -41,16 +42,19 @@ export function LanguageSwitcher({
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "btn-compact inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/[0.06]",
+          "btn-compact inline-flex min-h-[44px] items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/[0.06]",
           compact && "min-h-[40px] px-2.5",
+          open && "border-white/20 bg-white/[0.06]",
         )}
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={t("language.choose")}
       >
-        <span className="text-base leading-none" aria-hidden>
-          {current.flag}
-        </span>
+        <CountryFlag
+          countryCode={current.countryCode}
+          size={compact ? "sm" : "md"}
+          title={current.label}
+        />
         <span className="hidden sm:inline">{current.region}</span>
         <span className="text-xs text-slate-500 sm:hidden">{current.shortLabel}</span>
         <ChevronDown
@@ -65,7 +69,7 @@ export function LanguageSwitcher({
         <div
           role="listbox"
           aria-label={t("language.label")}
-          className="absolute right-0 top-full z-[60] mt-2 min-w-[180px] overflow-hidden rounded-2xl border border-white/15 bg-[#12121a] py-1 shadow-2xl shadow-black/50"
+          className="absolute right-0 top-full z-[60] mt-2 min-w-[210px] overflow-hidden rounded-2xl border border-white/15 bg-[#12121a] py-1.5 shadow-2xl shadow-black/50"
         >
           {LOCALES.map((item) => {
             const selected = item.code === locale;
@@ -78,15 +82,21 @@ export function LanguageSwitcher({
                 onClick={() => handleSelect(item.code)}
                 className={cn(
                   "flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-white/5",
-                  selected ? "text-white" : "text-slate-300",
+                  selected ? "bg-white/[0.04] text-white" : "text-slate-300",
                 )}
               >
-                <span className="text-lg leading-none">{item.flag}</span>
-                <span className="flex-1">
+                <CountryFlag
+                  countryCode={item.countryCode}
+                  size="lg"
+                  title={item.label}
+                />
+                <span className="min-w-0 flex-1">
                   <span className="block font-medium">{item.label}</span>
                   <span className="text-xs text-slate-500">{item.region}</span>
                 </span>
-                {selected && <Check className="size-4 shrink-0 text-[#e50914]" />}
+                {selected && (
+                  <Check className="size-4 shrink-0 text-[#e50914]" />
+                )}
               </button>
             );
           })}

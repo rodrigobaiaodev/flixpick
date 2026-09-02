@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "@/components/shared/LocaleProvider";
 
 const STORAGE_KEY = "flixpick:cookie-consent";
 
 type ConsentValue = "accepted" | "declined";
 
 export function CookieConsent() {
+  const t = useTranslations();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -40,13 +42,12 @@ export function CookieConsent() {
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <p className="text-xs leading-relaxed text-slate-400 sm:text-sm">
-          We use cookies for essential features and, with your OK, for ads and
-          analytics. See our{" "}
+          {t("cookie.message")}{" "}
           <Link
             href="/cookie-policy"
             className="text-slate-200 underline decoration-white/30 underline-offset-2 hover:text-white"
           >
-            Cookie Policy
+            {t("cookie.policy")}
           </Link>
           .
         </p>
@@ -56,14 +57,14 @@ export function CookieConsent() {
             onClick={() => save("declined")}
             className="min-h-[40px] rounded-lg border border-white/15 px-4 text-xs font-medium text-slate-300 transition hover:border-white/25 hover:text-white sm:text-sm"
           >
-            Decline
+            {t("cookie.decline")}
           </button>
           <button
             type="button"
             onClick={() => save("accepted")}
             className="min-h-[40px] rounded-lg bg-[#e50914] px-4 text-xs font-semibold text-white transition hover:bg-[#f6121d] sm:text-sm"
           >
-            Accept
+            {t("cookie.accept")}
           </button>
         </div>
       </div>

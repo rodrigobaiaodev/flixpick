@@ -9,6 +9,8 @@ import { AdBanner } from "@/components/shared/AdBanner";
 import { TopTrailersSection } from "@/components/home/TopTrailersSection";
 import { TrendingSection } from "@/components/home/TrendingSection";
 import { FLIXPICK_MOODS, MoodIcon } from "@/components/shared/MoodButton";
+import { useLocale, useTranslations } from "@/components/shared/LocaleProvider";
+import { getMoodLabel } from "@/lib/i18n/mood-labels";
 import { ShareChallengeModal } from "@/components/shared/ShareChallengeModal";
 import {
   getGenreDisplayName,
@@ -75,12 +77,12 @@ interface StoredLastPick {
 
 const MEDIA_TYPE_OPTIONS: {
   value: RecommendMediaType;
-  label: string;
+  labelKey: "home.mediaMovies" | "home.mediaTv" | "home.mediaBoth";
   Icon: LucideIcon;
 }[] = [
-  { value: "movie", label: "Movies", Icon: Clapperboard },
-  { value: "tv", label: "TV Shows", Icon: Tv },
-  { value: "both", label: "Both", Icon: Shuffle },
+  { value: "movie", labelKey: "home.mediaMovies", Icon: Clapperboard },
+  { value: "tv", labelKey: "home.mediaTv", Icon: Tv },
+  { value: "both", labelKey: "home.mediaBoth", Icon: Shuffle },
 ];
 
 function readJson<T>(key: string): T | null {
@@ -170,6 +172,8 @@ function SectionReveal({
 
 export default function HomePage() {
   const pathname = usePathname();
+  const t = useTranslations();
+  const { locale } = useLocale();
   const moodSectionRef = useRef<HTMLDivElement>(null);
   const refineSectionRef = useRef<HTMLDivElement>(null);
   const platformSectionRef = useRef<HTMLDivElement>(null);
@@ -440,7 +444,7 @@ export default function HomePage() {
   const handleSpin = useCallback(
     async (additionalExcludeId?: number) => {
       if (!selectedMoodId) {
-        setRecommendError("Pick a mood first to spin the wheel.");
+        setRecommendError(t("home.pickMoodFirst"));
         return;
       }
 
@@ -716,17 +720,16 @@ export default function HomePage() {
           {/* Headline */}
           <header className="text-center">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.35em] text-[#e50914]/90">
-              FlixPick
+              {t("home.brand")}
             </p>
             <h1 className="font-[family-name:var(--font-display)] leading-[0.95] tracking-wide text-slate-100">
-              Stop Scrolling.{" "}
+              {t("home.headline1")}{" "}
               <span className="bg-gradient-to-r from-[#e50914] to-[#ff4d4d] bg-clip-text text-transparent">
-                Start Watching.
+                {t("home.headline2")}
               </span>
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-slate-400">
-              Tell us your mood, pick your platforms. We&apos;ll find your
-              perfect movie in seconds.
+              {t("home.subtitle")}
             </p>
           </header>
 
@@ -753,7 +756,7 @@ export default function HomePage() {
                 <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                   <span className="flex items-center gap-3 text-sm font-medium text-slate-200">
                     <span className="size-5 animate-spin rounded-full border-2 border-white/20 border-t-[#e50914]" />
-                    Finding your next pick…
+                    {t("home.findingPick")}
                   </span>
                 </div>
               )}
@@ -774,7 +777,7 @@ export default function HomePage() {
 
                 <div className="flex flex-1 flex-col justify-center text-center sm:text-left">
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#e50914] drop-shadow-sm">
-                    Tonight&apos;s pick
+                    {t("home.tonightsPick")}
                   </p>
                   <h2 className="mt-2 font-[family-name:var(--font-display)] tracking-wide text-white drop-shadow-lg">
                     {pickResult.title}
@@ -807,7 +810,7 @@ export default function HomePage() {
                         className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-white px-6 text-sm font-semibold text-[#0a0a0f] transition hover:bg-slate-200"
                       >
                         <Play className="size-4 fill-current" />
-                        Watch Trailer
+                        {t("home.watchTrailer")}
                       </button>
                     )}
                     {pickWatchHref && (
@@ -818,7 +821,7 @@ export default function HomePage() {
                         className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-[#e50914] px-6 text-sm font-semibold text-white transition hover:bg-[#f6121d]"
                       >
                         <ExternalLink className="size-4" />
-                        Where to Watch
+                        {t("home.whereToWatch")}
                       </a>
                     )}
                     {pickDetailHref && (
@@ -826,7 +829,7 @@ export default function HomePage() {
                         href={pickDetailHref}
                         className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
                       >
-                        View Details
+                        {t("home.viewDetails")}
                       </Link>
                     )}
                     <button
@@ -836,7 +839,7 @@ export default function HomePage() {
                       className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[#e50914]/40 bg-[#e50914]/10 px-6 text-sm font-semibold text-[#ff6b6b] transition hover:border-[#e50914]/60 hover:bg-[#e50914]/20 disabled:opacity-50"
                     >
                       <Share2 className="size-4" />
-                      {shareLoading ? "Creating link…" : "🎬 Challenge a Friend"}
+                      {shareLoading ? t("home.creatingLink") : t("home.challengeFriend")}
                     </button>
                     <button
                       type="button"
@@ -844,7 +847,7 @@ export default function HomePage() {
                       disabled={recommendLoading}
                       className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 text-sm font-medium text-slate-200 transition hover:border-white/30 hover:bg-white/10 disabled:opacity-50"
                     >
-                      Roll Again
+                      {t("home.rollAgain")}
                     </button>
                     <button
                       type="button"
@@ -852,7 +855,7 @@ export default function HomePage() {
                       disabled={recommendLoading}
                       className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-white/10 px-6 text-sm font-medium text-slate-400 transition hover:border-white/25 hover:text-slate-200 disabled:opacity-50"
                     >
-                      Change Mood
+                      {t("home.changeMood")}
                     </button>
                   </div>
                 </div>
@@ -874,7 +877,7 @@ export default function HomePage() {
               {/* Media type toggle */}
               <div className="w-full max-w-md">
                 <p className="mb-3 text-center text-xs font-medium uppercase tracking-widest text-slate-500">
-                  What are you in the mood for?
+                  {t("home.moodQuestion")}
                 </p>
                 <div
                   className="flex flex-wrap justify-center gap-2"
@@ -897,7 +900,7 @@ export default function HomePage() {
                         )}
                       >
                         <MoodIcon Icon={option.Icon} selected={selected} size={18} />
-                        <span>{option.label}</span>
+                        <span>{t(option.labelKey)}</span>
                       </button>
                     );
                   })}
@@ -911,7 +914,7 @@ export default function HomePage() {
                 className="w-full max-w-4xl scroll-mt-24"
               >
                 <p className="mb-3 text-center text-xs font-medium uppercase tracking-widest text-slate-500">
-                  How are you feeling tonight?
+                  {t("home.feelingTonight")}
                 </p>
                 <div
                   className="flex flex-wrap justify-center gap-2"
@@ -937,7 +940,9 @@ export default function HomePage() {
                         <span aria-hidden className="text-base leading-none">
                           {mood.emoji}
                         </span>
-                        <span className="whitespace-nowrap">{mood.label}</span>
+                        <span className="whitespace-nowrap">
+                          {getMoodLabel(locale, mood.id, mood.label)}
+                        </span>
                       </button>
                     );
                   })}
@@ -947,7 +952,7 @@ export default function HomePage() {
               {selectedMoodId && refineGenreOptions.length > 0 && (
                 <div ref={refineSectionRef} className="w-full max-w-3xl scroll-mt-24">
                   <p className="mb-2 text-center text-[11px] font-medium tracking-wide text-slate-500">
-                    Refine by genre (optional):
+                    {t("home.refineGenre")}
                   </p>
                   <div
                     className="flex flex-wrap justify-center gap-1.5"
@@ -984,7 +989,7 @@ export default function HomePage() {
               >
                 <div className="mb-3 flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
                   <p className="text-center text-xs font-medium uppercase tracking-widest text-slate-500">
-                    Where do you watch?
+                    {t("home.whereWatch")}
                   </p>
                   <button
                     type="button"

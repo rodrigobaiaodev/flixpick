@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Check, ChevronRight, Play, Tv } from "lucide-react";
 import { updateStatus } from "@/actions/listActions";
 import { ListDbSetupBanner } from "@/components/shared/ListDbSetupBanner";
+import { useTranslations } from "@/components/shared/LocaleProvider";
 import { movieSlug } from "@/lib/genres";
 import {
   computeTVProgressPercent,
@@ -37,6 +38,7 @@ export function WatchingClient({
   tvProgress,
   dbReady,
 }: WatchingClientProps) {
+  const t = useTranslations();
   const [items, setItems] = useState(initialItems);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -63,15 +65,15 @@ export function WatchingClient({
       <section className="border-b border-white/5 bg-gradient-to-b from-amber-500/10 to-transparent px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
-            In Progress
+            {t("watching.inProgress")}
           </p>
           <h1 className="mt-2 font-[family-name:var(--font-display)] tracking-wide text-white">
-            Currently Watching
+            {t("watching.title")}
           </h1>
           <p className="mt-3 max-w-xl text-slate-400">
             {items.length > 0
-              ? `You have ${items.length} title${items.length === 1 ? "" : "s"} in progress. Pick up where you left off.`
-              : "Nothing in progress right now — start watching something great."}
+              ? t("watching.subtitle", { count: items.length })
+              : t("watching.emptyHint")}
           </p>
         </div>
       </section>
@@ -85,25 +87,23 @@ export function WatchingClient({
               <Play className="size-8 text-amber-400" />
             </div>
             <p className="text-xl font-semibold text-slate-200">
-              Nothing in progress
+              {t("watching.empty")}
             </p>
             <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-              {dbReady
-                ? 'Save a title and set its status to "Currently Watching" from any movie card.'
-                : "Complete the setup above, then mark titles as watching from any card."}
+              {dbReady ? t("watching.emptyHint") : t("watching.emptyHint")}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 href="/browse"
                 className="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-[#e50914] px-8 text-sm font-semibold text-white shadow-lg shadow-[#e50914]/25 hover:bg-[#f6121d]"
               >
-                Find Something to Watch
+                {t("watching.findSomething")}
               </Link>
               <Link
                 href="/my-list"
                 className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/15 px-8 text-sm font-medium text-slate-300 hover:bg-white/5"
               >
-                Go to My List
+                {t("watching.goToList")}
               </Link>
             </div>
           </div>
@@ -227,7 +227,7 @@ export function WatchingClient({
 
                       <div className="mt-4">
                         <div className="mb-1.5 flex justify-between text-[10px] font-medium uppercase tracking-wider text-slate-500">
-                          <span>Progress</span>
+                          <span>{t("watching.progress")}</span>
                           <span className="text-amber-400/80">
                             {progressPercent}%
                           </span>
@@ -246,7 +246,7 @@ export function WatchingClient({
                             href={trackHref}
                             className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-sm font-semibold text-amber-200 transition hover:bg-amber-500/20"
                           >
-                            {progressLabel ? "Update episode" : "Set episode"}
+                            {progressLabel ? t("watching.updateEpisode") : t("watching.setEpisode")}
                             <ChevronRight className="size-4" />
                           </Link>
                         )}
@@ -261,8 +261,8 @@ export function WatchingClient({
                         >
                           <Check className="size-4" />
                           {updatingId === item.id
-                            ? "Updating…"
-                            : "Mark as Watched"}
+                            ? t("watching.updating")
+                            : t("watching.markWatched")}
                         </button>
                       </div>
                     </div>

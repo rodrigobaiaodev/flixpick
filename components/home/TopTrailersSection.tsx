@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Clapperboard, Play, Tv } from "lucide-react";
 import { movieSlug } from "@/lib/genres";
 import { TrailerModal } from "@/components/shared/TrailerModal";
+import { useTranslations } from "@/components/shared/LocaleProvider";
 import type { ContentItem } from "@/types/movie";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +107,7 @@ function TrailerSkeleton() {
 }
 
 export function TopTrailersSection() {
+  const t = useTranslations();
   const [trailers, setTrailers] = useState<TrailerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -157,11 +159,11 @@ export function TopTrailersSection() {
               <div className="flex items-center gap-2">
                 <Play className="size-5 fill-violet-400 text-violet-400" />
                 <h2 className="font-[family-name:var(--font-display)] tracking-wide text-slate-100">
-                  Top 10 Trailers This Week
+                  {t("home.trailersTitle")}
                 </h2>
               </div>
               <p className="mt-2 max-w-xl text-sm text-slate-500">
-                The hottest official trailers — watch before you pick tonight&apos;s title.
+                {t("home.trailersDesc")}
               </p>
             </div>
             <span
@@ -169,7 +171,7 @@ export function TopTrailersSection() {
                 "inline-flex self-start rounded-2xl border border-violet-500/20 bg-violet-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-violet-300 sm:self-auto",
               )}
             >
-              Updated weekly
+              {t("common.updatedWeekly")}
             </span>
           </div>
 

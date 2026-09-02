@@ -1,14 +1,19 @@
-import Link from "next/link";
+"use client";
 
-const footerLinks = [
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
-  { href: "/privacy-policy", label: "Privacy Policy" },
-  { href: "/cookie-policy", label: "Cookies" },
-  { href: "/terms-of-service", label: "Terms of Service" },
-] as const;
+import Link from "next/link";
+import { useTranslations } from "@/components/shared/LocaleProvider";
+import type { TranslationKey } from "@/lib/i18n/messages";
+
+const footerLinks: { href: string; labelKey: TranslationKey }[] = [
+  { href: "/about", labelKey: "footer.about" },
+  { href: "/contact", labelKey: "footer.contact" },
+  { href: "/privacy-policy", labelKey: "footer.privacy" },
+  { href: "/cookie-policy", labelKey: "footer.cookies" },
+  { href: "/terms-of-service", labelKey: "footer.terms" },
+];
 
 export function Footer() {
+  const t = useTranslations();
   const year = new Date().getFullYear();
 
   return (
@@ -24,13 +29,13 @@ export function Footer() {
 
           <nav aria-label="Footer navigation">
             <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              {footerLinks.map(({ href, label }) => (
+              {footerLinks.map(({ href, labelKey }) => (
                 <li key={href}>
                   <Link
                     href={href}
                     className="text-sm text-slate-400 transition-colors hover:text-[#e50914]"
                   >
-                    {label}
+                    {t(labelKey)}
                   </Link>
                 </li>
               ))}
@@ -39,7 +44,7 @@ export function Footer() {
         </div>
 
         <p className="mt-8 text-center text-sm text-slate-500">
-          &copy; {year} flixpick.app. All rights reserved.
+          &copy; {year} flixpick.app. {t("footer.rights")}
         </p>
       </div>
     </footer>

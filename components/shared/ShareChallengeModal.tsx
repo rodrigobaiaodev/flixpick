@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { Check, Copy, Link2, Share2, Sparkles, Star, X } from "lucide-react";
 import { SHARE_PLATFORMS } from "@/lib/share-challenge";
+import { useTranslations } from "@/components/shared/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 export interface ShareChallengeModalProps {
@@ -38,6 +39,7 @@ export function ShareChallengeModal({
   moodLabel,
   mediaType = "movie",
 }: ShareChallengeModalProps) {
+  const t = useTranslations();
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
@@ -171,13 +173,13 @@ export function ShareChallengeModal({
             <div className="min-w-0 flex-1 pb-1">
               <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#e50914]">
                 <Sparkles className="size-3" />
-                Challenge a friend
+                {t("share.challengeFriend")}
               </p>
               <h2
                 id="share-challenge-title"
                 className="mt-1 font-[family-name:var(--font-display)] text-xl tracking-wide text-white sm:text-2xl"
               >
-                Share your pick
+                {t("share.sharePick")}
               </h2>
               <p className="mt-1 line-clamp-2 text-sm font-medium text-slate-200">
                 {title}
@@ -195,7 +197,7 @@ export function ShareChallengeModal({
                   </span>
                 )}
                 <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs capitalize text-slate-400">
-                  {mediaType === "tv" ? "TV Series" : "Movie"}
+                  {mediaType === "tv" ? t("detail.tvSeries") : t("detail.movie")}
                 </span>
                 {moodLabel && (
                   <span className="rounded-full border border-[#e50914]/30 bg-[#e50914]/10 px-2.5 py-0.5 text-xs text-[#ff6b6b]">
@@ -216,14 +218,14 @@ export function ShareChallengeModal({
               className="btn-compact flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#e50914] to-[#b20710] text-sm font-semibold text-white shadow-lg shadow-[#e50914]/25 transition hover:from-[#f6121d] hover:to-[#c40812] disabled:opacity-60"
             >
               <Share2 className="size-4" />
-              {sharing ? "Sharing…" : "Share with image"}
+              {sharing ? t("share.sharing") : t("share.withImage")}
             </button>
           )}
 
           <div>
             <label className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
               <Link2 className="size-3.5" />
-              Your link
+              {t("share.yourLink")}
             </label>
             <div className="flex gap-2">
               <input
@@ -246,12 +248,12 @@ export function ShareChallengeModal({
                 {copied ? (
                   <>
                     <Check className="size-4" />
-                    Copied
+                    {t("share.copied")}
                   </>
                 ) : (
                   <>
                     <Copy className="size-4" />
-                    Copy
+                    {t("share.copy")}
                   </>
                 )}
               </button>
@@ -260,7 +262,7 @@ export function ShareChallengeModal({
 
           <div>
             <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-              Share on
+              {t("share.shareOn")}
             </p>
             <div className="grid grid-cols-4 gap-2">
               {SHARE_PLATFORMS.map((platform) => (
@@ -282,7 +284,7 @@ export function ShareChallengeModal({
 
           <div className="rounded-2xl border border-white/8 bg-gradient-to-br from-white/[0.04] to-transparent p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-              Preview message
+              {t("share.preview")}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">
               {shareMessage}
