@@ -6,14 +6,17 @@ import { useEffect, useRef, useState } from "react";
 import { Menu, Search, X, ChevronDown, LogOut } from "lucide-react";
 import { useAuth } from "@/components/shared/AuthProvider";
 import { HeaderSearch } from "@/components/shared/HeaderSearch";
+import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
+import { useTranslations } from "@/components/shared/LocaleProvider";
 import { cn } from "@/lib/utils";
+import type { TranslationKey } from "@/lib/i18n/messages";
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/browse/movies", label: "Movies" },
-  { href: "/browse/tv", label: "TV Shows" },
-  { href: "/browse", label: "Browse" },
-] as const;
+const navLinks: { href: string; labelKey: TranslationKey }[] = [
+  { href: "/", labelKey: "nav.home" },
+  { href: "/browse/movies", labelKey: "nav.movies" },
+  { href: "/browse/tv", labelKey: "nav.tvShows" },
+  { href: "/browse", labelKey: "nav.browse" },
+];
 
 function getUserInitials(
   name: string | undefined,
@@ -31,6 +34,7 @@ function getUserInitials(
 
 export function Header() {
   const { user, loading, signOut } = useAuth();
+  const t = useTranslations();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -81,13 +85,13 @@ export function Header() {
         {/* Desktop nav */}
         <nav aria-label="Main navigation" className="hidden flex-1 lg:block">
           <ul className="flex items-center gap-1">
-            {navLinks.map(({ href, label }) => (
+            {navLinks.map(({ href, labelKey }) => (
               <li key={href}>
                 <Link
                   href={href}
                   className="rounded-md px-4 py-2 text-base font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-100"
                 >
-                  {label}
+                  {t(labelKey)}
                 </Link>
               </li>
             ))}
@@ -96,6 +100,7 @@ export function Header() {
 
         {/* Auth section */}
         <div className="flex items-center gap-2">
+          <LanguageSwitcher className="hidden sm:block" />
           <HeaderSearch />
 
           {!loading && !user && (
@@ -103,7 +108,7 @@ export function Header() {
               href="/auth/login"
               className="hidden min-h-[44px] items-center justify-center rounded-lg bg-[#e50914] px-5 text-sm font-semibold text-white transition hover:bg-[#f6121d] sm:inline-flex"
             >
-              Sign In
+              {t("auth.signIn")}
             </Link>
           )}
 
@@ -150,7 +155,7 @@ export function Header() {
                     onClick={() => setUserMenuOpen(false)}
                     className="block px-4 py-2.5 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
                   >
-                    My List
+                    {t("nav.myList")}
                   </Link>
                   <Link
                     href="/watching"
@@ -158,7 +163,7 @@ export function Header() {
                     onClick={() => setUserMenuOpen(false)}
                     className="block px-4 py-2.5 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
                   >
-                    Watching
+                    {t("nav.watching")}
                   </Link>
                   <Link
                     href="/profile"
@@ -166,7 +171,7 @@ export function Header() {
                     onClick={() => setUserMenuOpen(false)}
                     className="block px-4 py-2.5 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
                   >
-                    Profile
+                    {t("nav.profile")}
                   </Link>
                   <hr className="my-1 border-white/10" />
                   <button
@@ -176,7 +181,7 @@ export function Header() {
                     className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
                   >
                     <LogOut className="size-4" />
-                    Sign Out
+                    {t("auth.signOut")}
                   </button>
                 </div>
               )}
@@ -205,6 +210,9 @@ export function Header() {
         )}
       >
         <ul className="flex flex-col px-4 py-3">
+          <li className="mb-2 sm:hidden">
+            <LanguageSwitcher className="w-full" />
+          </li>
           <li>
             <Link
               href="/search"
@@ -212,17 +220,17 @@ export function Header() {
               className="flex min-h-[44px] items-center gap-2 rounded-lg px-3 text-base font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
             >
               <Search className="size-4" />
-              Search
+              {t("nav.search")}
             </Link>
           </li>
-          {navLinks.map(({ href, label }) => (
+          {navLinks.map(({ href, labelKey }) => (
             <li key={href}>
               <Link
                 href={href}
                 onClick={() => setMobileOpen(false)}
                 className="flex min-h-[44px] items-center rounded-lg px-3 text-base font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
               >
-                {label}
+                {t(labelKey)}
               </Link>
             </li>
           ))}
@@ -234,7 +242,7 @@ export function Header() {
                 onClick={() => setMobileOpen(false)}
                 className="flex min-h-[44px] items-center justify-center rounded-lg bg-[#e50914] px-3 text-base font-semibold text-white"
               >
-                Sign In
+                {t("auth.signIn")}
               </Link>
             </li>
           )}
@@ -266,7 +274,7 @@ export function Header() {
                   onClick={() => setMobileOpen(false)}
                   className="flex min-h-[44px] items-center rounded-lg px-3 text-base text-slate-300 hover:bg-white/5 hover:text-white"
                 >
-                  My List
+                  {t("nav.myList")}
                 </Link>
               </li>
               <li>
@@ -275,7 +283,7 @@ export function Header() {
                   onClick={() => setMobileOpen(false)}
                   className="flex min-h-[44px] items-center rounded-lg px-3 text-base text-slate-300 hover:bg-white/5 hover:text-white"
                 >
-                  Watching
+                  {t("nav.watching")}
                 </Link>
               </li>
               <li>
@@ -284,7 +292,7 @@ export function Header() {
                   onClick={() => setMobileOpen(false)}
                   className="flex min-h-[44px] items-center rounded-lg px-3 text-base text-slate-300 hover:bg-white/5 hover:text-white"
                 >
-                  Profile
+                  {t("nav.profile")}
                 </Link>
               </li>
               <li>
@@ -294,7 +302,7 @@ export function Header() {
                   className="flex min-h-[44px] w-full items-center gap-2 rounded-lg px-3 text-base text-slate-400 hover:bg-white/5 hover:text-white"
                 >
                   <LogOut className="size-4" />
-                  Sign Out
+                  {t("auth.signOut")}
                 </button>
               </li>
             </>

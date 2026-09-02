@@ -124,7 +124,19 @@ export function ShareChallengeModal({
         onClick={onClose}
       />
 
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-[#0d0d14] shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+      <div
+        className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-[#0d0d14] shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="btn-compact absolute right-4 top-4 z-30 flex size-10 items-center justify-center rounded-full border border-white/15 bg-black/60 text-slate-300 backdrop-blur-sm transition hover:border-white/30 hover:bg-black/80 hover:text-white"
+          aria-label="Close"
+        >
+          <X className="size-4" />
+        </button>
+
         {/* Hero with content image */}
         <div className="relative h-44 overflow-hidden sm:h-52">
           {heroImage ? (
@@ -140,19 +152,10 @@ export function ShareChallengeModal({
           ) : (
             <div className="size-full bg-gradient-to-br from-[#e50914]/30 via-[#1a1a28] to-[#0d0d14]" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d14] via-[#0d0d14]/70 to-[#0d0d14]/20" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0d0d14]/40 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0d0d14] via-[#0d0d14]/70 to-[#0d0d14]/20" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0d0d14]/40 to-transparent" />
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-3 top-3 flex size-9 items-center justify-center rounded-full border border-white/15 bg-black/40 text-slate-300 backdrop-blur-sm transition hover:border-white/30 hover:text-white"
-            aria-label="Close"
-          >
-            <X className="size-4" />
-          </button>
-
-          <div className="absolute bottom-0 left-0 right-0 flex items-end gap-4 p-5">
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex items-end gap-4 p-5">
             {posterImage && (
               <div className="relative aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-white/20 shadow-2xl shadow-black/50 sm:w-24">
                 <Image

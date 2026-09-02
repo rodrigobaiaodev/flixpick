@@ -4,6 +4,7 @@ import { AuthProvider } from "@/components/shared/AuthProvider";
 import { CookieConsent } from "@/components/shared/CookieConsent";
 import { Footer } from "@/components/shared/Footer";
 import { Header } from "@/components/shared/Header";
+import { LocaleProvider } from "@/components/shared/LocaleProvider";
 import { InstallPrompt } from "@/components/shared/InstallPrompt";
 import { LoginModal } from "@/components/shared/LoginModal";
 import { ServiceWorkerRegistration } from "@/components/shared/ServiceWorkerRegistration";
@@ -119,13 +120,15 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
         <AuthProvider>
-          <ServiceWorkerRegistration />
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <LoginModal />
-          <InstallPrompt />
-          <CookieConsent />
+          <LocaleProvider>
+            <ServiceWorkerRegistration />
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <LoginModal />
+            <InstallPrompt />
+            <CookieConsent />
+          </LocaleProvider>
         </AuthProvider>
       </body>
     </html>
