@@ -12,6 +12,8 @@ import {
 import { getWhereToWatchUrlForMovie } from "@/lib/watch-links";
 import { ListButton } from "@/components/shared/ListButton";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
+import { useLocale } from "@/components/shared/LocaleProvider";
+import { getLocalizedGenreName } from "@/lib/i18n/genres";
 import type { ContentItem } from "@/types/movie";
 import type { MovieCardProps } from "@/types/ui";
 import { cn } from "@/lib/utils";
@@ -88,6 +90,7 @@ export function MovieCard(props: MovieCardComponentProps) {
     showAvailability = false,
   } = props;
 
+  const { locale } = useLocale();
   const isTV = movie.mediaType === "tv";
   const year = getReleaseYear(movie.releaseDate);
   const posterUrl = getPosterUrl(movie.posterPath);
@@ -224,7 +227,7 @@ export function MovieCard(props: MovieCardComponentProps) {
             <>
               <span className="hidden text-white/20 sm:inline">•</span>
               <span className="hidden rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-slate-300 sm:inline">
-                {getGenreDisplayName(primaryGenre.id, primaryGenre.name)}
+                {getLocalizedGenreName(locale, primaryGenre.id, primaryGenre.name)}
               </span>
             </>
           )}

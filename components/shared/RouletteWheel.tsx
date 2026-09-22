@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { Movie } from "@/types/movie";
 import { cn } from "@/lib/utils";
-import { getGenreDisplayName } from "@/components/shared/MovieCard";
+import { useLocale, useTranslations, useUiTranslations } from "@/components/shared/LocaleProvider";
+import { getLocalizedGenreName } from "@/lib/i18n/genres";
 
 const WHEEL_SEGMENTS = [
   "Action",
@@ -88,6 +89,9 @@ export function RouletteWheel({
   segments: _segments = WHEEL_SEGMENTS,
   onChangeMood,
 }: RouletteWheelProps) {
+  const t = useTranslations();
+  const tu = useUiTranslations();
+  const { locale } = useLocale();
   const [phase, setPhase] = useState<WheelPhase>("idle");
   const [snapPulse, setSnapPulse] = useState(false);
   const spinResolveRef = useRef<(() => void) | null>(null);
@@ -166,7 +170,9 @@ export function RouletteWheel({
           />
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0f]/90 p-4 shadow-2xl shadow-black/60 backdrop-blur-sm">
             <div className="mb-3 text-center text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-500">
-              {phase === "spinning" ? "Picking your film" : "Your match"}
+              {phase === "spinning"
+                ? t("home.pickingFilm")
+                : t("home.yourMatch")}
             </div>
             <div className="flex items-center justify-center gap-3">
               <ShimmerSlot variant="side" pulseDelay="0s" />
@@ -222,10 +228,10 @@ export function RouletteWheel({
           {isLoading || phase === "spinning" || phase === "snapping" ? (
             <span className="flex items-center gap-2">
               <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Finding your movie…
+              {t("home.findingMovie")}
             </span>
           ) : (
-            "Find My Movie"
+            t("home.findMovie")
           )}
         </button>
       )}
@@ -234,7 +240,7 @@ export function RouletteWheel({
       {showResult && result && resultPoster && (
         <div className="slot-card-rise flex w-full max-w-2xl flex-col items-center gap-6">
           <p className="text-center text-sm font-medium uppercase tracking-widest text-[#e50914]">
-            Tonight&apos;s pick
+            {t("home.tonightsPick")}
           </p>
 
           <div className="relative w-full min-h-[300px] overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/60">
@@ -278,7 +284,7 @@ export function RouletteWheel({
                       key={g.id}
                       className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium text-slate-100"
                     >
-                      {getGenreDisplayName(g.id, g.name)}
+                      {getLocalizedGenreName(locale, g.id, g.name)}
                     </span>
                   ))}
                 </div>
@@ -302,7 +308,7 @@ export function RouletteWheel({
               onClick={handleRollAgain}
               className="rounded-lg border border-white/15 bg-white/5 px-6 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-slate-100"
             >
-              Not feeling it? Roll Again
+              {tu("home.notFeelingIt")}
             </button>
             {onChangeMood && (
               <button
@@ -310,7 +316,7 @@ export function RouletteWheel({
                 onClick={onChangeMood}
                 className="rounded-lg border border-white/10 px-6 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:border-white/20 hover:text-slate-200"
               >
-                Change Mood
+                {t("home.changeMood")}
               </button>
             )}
           </div>

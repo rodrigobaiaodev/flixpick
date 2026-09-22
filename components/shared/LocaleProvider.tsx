@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE,
@@ -20,11 +21,15 @@ import {
   translateWithParams,
   type TranslationKey,
 } from "@/lib/i18n/messages";
+import { translateExtra, type ExtraKey } from "@/lib/i18n/extra";
+import { translateUi, type UiKey } from "@/lib/i18n/ui";
 
 interface LocaleContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
+  te: (key: ExtraKey, params?: Record<string, string | number>) => string;
+  tu: (key: UiKey, params?: Record<string, string | number>) => string;
 }
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
@@ -55,18 +60,26 @@ function persistLocale(locale: Locale) {
 }
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const stored = readStoredLocale();
     setLocaleState(stored);
-    document.documentElement.lang = getLocaleMeta(stored).htmlLang;
+    persistLocale(stored);
+    setHydrated(true);
   }, []);
 
-  const setLocale = useCallback((next: Locale) => {
-    setLocaleState(next);
-    persistLocale(next);
-  }, []);
+  const setLocale = useCallback(
+    (next: Locale) => {
+      setLocaleState(next);
+      persistLocale(next);
+      // Re-fetch RSC (detail pages / TMDB language) with the new cookie
+      router.refresh();
+    },
+    [router],
+  );
 
   const value = useMemo<LocaleContextValue>(
     () => ({
@@ -76,13 +89,15 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
         params
           ? translateWithParams(locale, key, params)
           : translate(locale, key),
+      te: (key, params) => translateExtra(locale, key, params),
+      tu: (key, params) => translateUi(locale, key, params),
     }),
     [locale, setLocale],
   );
 
   return (
     <LocaleContext.Provider value={value}>
-      <div key={locale}>{children}</div>
+      <div key={hydrated ? locale : "boot"}>{children}</div>
     </LocaleContext.Provider>
   );
 }
@@ -97,4 +112,12 @@ export function useLocale() {
 
 export function useTranslations() {
   return useLocale().t;
+}
+
+export function useExtraTranslations() {
+  return useLocale().te;
+}
+
+export function useUiTranslations() {
+  return useLocale().tu;
 }

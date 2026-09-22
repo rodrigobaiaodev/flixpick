@@ -58,6 +58,11 @@ export type TranslationKey =
   | "home.feelingTonight"
   | "home.refineGenre"
   | "home.pickMoodFirst"
+  | "home.findMovie"
+  | "home.findingMovie"
+  | "home.yourMatch"
+  | "home.pickingFilm"
+  | "home.unlockFind"
   | "home.trendingTitle"
   | "home.trendingDesc"
   | "home.trailersTitle"
@@ -156,6 +161,11 @@ const en: MessageMap = {
   "home.feelingTonight": "How are you feeling tonight?",
   "home.refineGenre": "Refine by genre (optional):",
   "home.pickMoodFirst": "Pick a mood first to spin the wheel.",
+  "home.findMovie": "Find My Movie",
+  "home.findingMovie": "Finding your movie…",
+  "home.yourMatch": "Your match",
+  "home.pickingFilm": "Picking your film",
+  "home.unlockFind": "Select a mood to unlock Find My Movie",
   "home.trendingTitle": "Trending Now",
   "home.trendingDesc":
     "What everyone's watching right now — ranked by buzz and ratings.",
@@ -257,6 +267,11 @@ const pt: MessageMap = {
   "home.feelingTonight": "Como você está se sentindo hoje?",
   "home.refineGenre": "Refinar por gênero (opcional):",
   "home.pickMoodFirst": "Escolha um humor antes de girar a roleta.",
+  "home.findMovie": "Encontrar meu filme",
+  "home.findingMovie": "Buscando seu filme…",
+  "home.yourMatch": "Seu match",
+  "home.pickingFilm": "Escolhendo seu filme",
+  "home.unlockFind": "Escolha um humor para liberar Encontrar meu filme",
   "home.trendingTitle": "Em alta agora",
   "home.trendingDesc":
     "O que todo mundo está assistindo — ranqueado por buzz e avaliações.",
@@ -360,6 +375,11 @@ const es: MessageMap = {
   "home.feelingTonight": "¿Cómo te sientes esta noche?",
   "home.refineGenre": "Refinar por género (opcional):",
   "home.pickMoodFirst": "Elige un mood antes de girar la ruleta.",
+  "home.findMovie": "Encontrar mi película",
+  "home.findingMovie": "Buscando tu película…",
+  "home.yourMatch": "Tu match",
+  "home.pickingFilm": "Eligiendo tu película",
+  "home.unlockFind": "Elige un mood para desbloquear Encontrar mi película",
   "home.trendingTitle": "Tendencias ahora",
   "home.trendingDesc":
     "Lo que todos están viendo — clasificado por buzz y valoraciones.",

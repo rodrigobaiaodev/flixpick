@@ -78,7 +78,7 @@ export interface TechnicalDetailRow {
   value: string;
 }
 
-async function tmdbFetch<T>(path: string): Promise<T> {
+async function tmdbFetch<T>(path: string, language?: string): Promise<T> {
   const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
   const baseUrl = process.env.NEXT_PUBLIC_TMDB_BASE_URL?.replace(/\/$/, "");
 
@@ -88,7 +88,7 @@ async function tmdbFetch<T>(path: string): Promise<T> {
 
   const url = new URL(`${baseUrl}${path}`);
   url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("language", LANGUAGE);
+  url.searchParams.set("language", language ?? LANGUAGE);
 
   const response = await fetch(url.toString(), {
     next: { revalidate: 3600 },
@@ -109,8 +109,14 @@ function mapGenresFromIds(genreIds?: number[]): Genre[] {
   }));
 }
 
-export async function getTVCast(tvId: number): Promise<Person[]> {
-  const data = await tmdbFetch<TmdbCreditsResponse>(`/tv/${tvId}/credits`);
+export async function getTVCast(
+  tvId: number,
+  language?: string,
+): Promise<Person[]> {
+  const data = await tmdbFetch<TmdbCreditsResponse>(
+    `/tv/${tvId}/credits`,
+    language,
+  );
 
   return data.cast
     .sort((a, b) => a.order - b.order)
@@ -123,8 +129,14 @@ export async function getTVCast(tvId: number): Promise<Person[]> {
     }));
 }
 
-export async function getTVCrew(tvId: number): Promise<Person[]> {
-  const data = await tmdbFetch<TmdbCreditsResponse>(`/tv/${tvId}/credits`);
+export async function getTVCrew(
+  tvId: number,
+  language?: string,
+): Promise<Person[]> {
+  const data = await tmdbFetch<TmdbCreditsResponse>(
+    `/tv/${tvId}/credits`,
+    language,
+  );
 
   const seen = new Set<string>();
   const crew: Person[] = [];
@@ -149,11 +161,12 @@ export async function getTVTechnicalDetails(
   tvId: number,
   show: ContentItem,
   crew: Person[],
+  language?: string,
 ): Promise<TechnicalDetailRow[]> {
   const extended = await tmdbFetch<{
     original_language: string;
     origin_country: string[];
-  }>(`/tv/${tvId}`);
+  }>(`/tv/${tvId}`, language);
 
   const creator =
     crew.find((p) => p.job === "Creator" || p.job === "Series Creator") ??
@@ -181,8 +194,14 @@ export async function getTVTechnicalDetails(
   ];
 }
 
-export async function getTVVideos(tvId: number): Promise<ContentVideo[]> {
-  const data = await tmdbFetch<TmdbVideosResponse>(`/tv/${tvId}/videos`);
+export async function getTVVideos(
+  tvId: number,
+  language?: string,
+): Promise<ContentVideo[]> {
+  const data = await tmdbFetch<TmdbVideosResponse>(
+    `/tv/${tvId}/videos`,
+    language,
+  );
 
   return data.results
     .filter((v) => v.site === "YouTube")
@@ -198,8 +217,12 @@ export async function getTVVideos(tvId: number): Promise<ContentVideo[]> {
 export async function getSimilarTVShows(
   tvId: number,
   limit = 8,
+  language?: string,
 ): Promise<ContentItem[]> {
-  const data = await tmdbFetch<TmdbSimilarTVResponse>(`/tv/${tvId}/similar`);
+  const data = await tmdbFetch<TmdbSimilarTVResponse>(
+    `/tv/${tvId}/similar`,
+    language,
+  );
 
   return data.results.slice(0, limit).map((item) => {
     const show = mapTmdbTVToContentItem(item);
@@ -216,8 +239,14 @@ export async function getSimilarTVShows(
   });
 }
 
-export async function getTVTrailerKey(tvId: number): Promise<string | null> {
-  const data = await tmdbFetch<TmdbVideosResponse>(`/tv/${tvId}/videos`);
+export async function getTVTrailerKey(
+  tvId: number,
+  language?: string,
+): Promise<string | null> {
+  const data = await tmdbFetch<TmdbVideosResponse>(
+    `/tv/${tvId}/videos`,
+    language,
+  );
 
   const trailer =
     data.results.find(
@@ -237,16 +266,19 @@ export interface TVPageData {
   videos: ContentVideo[];
 }
 
-export async function getTVPageData(tvId: number): Promise<TVPageData> {
+export async function getTVPageData(
+  tvId: number,
+  language?: string,
+): Promise<TVPageData> {
   const [details, availability, cast, crew, similar, trailerKey, videos] =
     await Promise.all([
-      getTVDetails(tvId),
+      getTVDetails(tvId, language),
       getTVWatchProviders(tvId),
-      getTVCast(tvId),
-      getTVCrew(tvId),
-      getSimilarTVShows(tvId, 8),
-      getTVTrailerKey(tvId),
-      getTVVideos(tvId),
+      getTVCast(tvId, language),
+      getTVCrew(tvId, language),
+      getSimilarTVShows(tvId, 8, language),
+      getTVTrailerKey(tvId, language),
+      getTVVideos(tvId, language),
     ]);
 
   const show: ContentItem = {
@@ -259,7 +291,12 @@ export async function getTVPageData(tvId: number): Promise<TVPageData> {
     credits: { cast, crew },
   };
 
-  const technicalDetails = await getTVTechnicalDetails(tvId, show, crew);
+  const technicalDetails = await getTVTechnicalDetails(
+    tvId,
+    show,
+    crew,
+    language,
+  );
 
   return { show, cast, crew, similar, trailerKey, technicalDetails, videos };
 }

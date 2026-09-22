@@ -89,7 +89,7 @@ export interface TechnicalDetailRow {
   value: string;
 }
 
-async function tmdbFetch<T>(path: string): Promise<T> {
+async function tmdbFetch<T>(path: string, language?: string): Promise<T> {
   const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
   const baseUrl = process.env.NEXT_PUBLIC_TMDB_BASE_URL?.replace(/\/$/, "");
 
@@ -99,7 +99,7 @@ async function tmdbFetch<T>(path: string): Promise<T> {
 
   const url = new URL(`${baseUrl}${path}`);
   url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("language", LANGUAGE);
+  url.searchParams.set("language", language ?? LANGUAGE);
 
   const response = await fetch(url.toString(), {
     next: { revalidate: 3600 },
@@ -120,8 +120,14 @@ function mapGenresFromIds(genreIds?: number[]): Genre[] {
   }));
 }
 
-export async function getMovieCast(movieId: number): Promise<Person[]> {
-  const data = await tmdbFetch<TmdbCreditsResponse>(`/movie/${movieId}/credits`);
+export async function getMovieCast(
+  movieId: number,
+  language?: string,
+): Promise<Person[]> {
+  const data = await tmdbFetch<TmdbCreditsResponse>(
+    `/movie/${movieId}/credits`,
+    language,
+  );
 
   return data.cast
     .sort((a, b) => a.order - b.order)
@@ -134,8 +140,14 @@ export async function getMovieCast(movieId: number): Promise<Person[]> {
     }));
 }
 
-export async function getMovieCrew(movieId: number): Promise<Person[]> {
-  const data = await tmdbFetch<TmdbCreditsResponse>(`/movie/${movieId}/credits`);
+export async function getMovieCrew(
+  movieId: number,
+  language?: string,
+): Promise<Person[]> {
+  const data = await tmdbFetch<TmdbCreditsResponse>(
+    `/movie/${movieId}/credits`,
+    language,
+  );
 
   const seen = new Set<string>();
   const crew: Person[] = [];
@@ -168,8 +180,9 @@ function formatCurrency(amount: number): string {
 export async function getMovieTechnicalDetails(
   movieId: number,
   crew: Person[],
+  language?: string,
 ): Promise<TechnicalDetailRow[]> {
-  const data = await tmdbFetch<TmdbMovieExtended>(`/movie/${movieId}`);
+  const data = await tmdbFetch<TmdbMovieExtended>(`/movie/${movieId}`, language);
   const director = crew.find((p) => p.job === "Director");
 
   return [
@@ -191,8 +204,14 @@ export async function getMovieTechnicalDetails(
   ];
 }
 
-export async function getMovieVideos(movieId: number): Promise<ContentVideo[]> {
-  const data = await tmdbFetch<TmdbVideosResponse>(`/movie/${movieId}/videos`);
+export async function getMovieVideos(
+  movieId: number,
+  language?: string,
+): Promise<ContentVideo[]> {
+  const data = await tmdbFetch<TmdbVideosResponse>(
+    `/movie/${movieId}/videos`,
+    language,
+  );
 
   return data.results
     .filter((v) => v.site === "YouTube")
@@ -205,8 +224,15 @@ export async function getMovieVideos(movieId: number): Promise<ContentVideo[]> {
     }));
 }
 
-export async function getSimilarMovies(movieId: number, limit = 8): Promise<Movie[]> {
-  const data = await tmdbFetch<TmdbSimilarResponse>(`/movie/${movieId}/similar`);
+export async function getSimilarMovies(
+  movieId: number,
+  limit = 8,
+  language?: string,
+): Promise<Movie[]> {
+  const data = await tmdbFetch<TmdbSimilarResponse>(
+    `/movie/${movieId}/similar`,
+    language,
+  );
 
   return data.results.slice(0, limit).map((item) => {
     const movie = mapTmdbMovieToMovie(item);
@@ -223,8 +249,14 @@ export async function getSimilarMovies(movieId: number, limit = 8): Promise<Movi
   });
 }
 
-export async function getMovieTrailerKey(movieId: number): Promise<string | null> {
-  const data = await tmdbFetch<TmdbVideosResponse>(`/movie/${movieId}/videos`);
+export async function getMovieTrailerKey(
+  movieId: number,
+  language?: string,
+): Promise<string | null> {
+  const data = await tmdbFetch<TmdbVideosResponse>(
+    `/movie/${movieId}/videos`,
+    language,
+  );
 
   const trailer =
     data.results.find(
@@ -244,19 +276,26 @@ export interface MoviePageData {
   videos: ContentVideo[];
 }
 
-export async function getMoviePageData(movieId: number): Promise<MoviePageData> {
+export async function getMoviePageData(
+  movieId: number,
+  language?: string,
+): Promise<MoviePageData> {
   const [details, availability, cast, crew, similar, trailerKey, videos] =
     await Promise.all([
-      getMovieDetails(movieId),
+      getMovieDetails(movieId, language),
       getWatchProviders(movieId),
-      getMovieCast(movieId),
-      getMovieCrew(movieId),
-      getSimilarMovies(movieId, 8),
-      getMovieTrailerKey(movieId),
-      getMovieVideos(movieId),
+      getMovieCast(movieId, language),
+      getMovieCrew(movieId, language),
+      getSimilarMovies(movieId, 8, language),
+      getMovieTrailerKey(movieId, language),
+      getMovieVideos(movieId, language),
     ]);
 
-  const technicalDetails = await getMovieTechnicalDetails(movieId, crew);
+  const technicalDetails = await getMovieTechnicalDetails(
+    movieId,
+    crew,
+    language,
+  );
 
   const movie: Movie = {
     ...details,

@@ -10,7 +10,8 @@ import {
   MovieCardSkeleton,
 } from "@/components/shared/MovieCard";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
-import { useTranslations } from "@/components/shared/LocaleProvider";
+import { useLocale, useTranslations, useUiTranslations } from "@/components/shared/LocaleProvider";
+import { getLocalizedGenreName } from "@/lib/i18n/genres";
 import type { ContentItem } from "@/types/movie";
 import { cn } from "@/lib/utils";
 
@@ -33,13 +34,15 @@ function TrendingCard({
   rank: number;
 }) {
   const t = useTranslations();
+  const tu = useUiTranslations();
+  const { locale } = useLocale();
   const posterUrl = movie.posterPath
     ? `https://image.tmdb.org/t/p/w342${movie.posterPath}`
     : null;
   const href = `/${movie.mediaType}/${movie.id}/${movieSlug(movie.title)}`;
   const year = movie.releaseDate?.slice(0, 4) || "—";
   const genre = movie.genres[0]
-    ? getGenreDisplayName(movie.genres[0].id)
+    ? getLocalizedGenreName(locale, movie.genres[0].id, movie.genres[0].name)
     : null;
   const provider = getPrimaryProvider(movie);
 
@@ -59,7 +62,7 @@ function TrendingCard({
               />
             ) : (
               <div className="flex size-full items-center justify-center bg-white/5 text-slate-600">
-                No poster
+                {tu("common.noPoster")}
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
@@ -127,6 +130,7 @@ export function TrendingSection({
   error,
 }: TrendingSectionProps) {
   const t = useTranslations();
+  const tu = useUiTranslations();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scroll, setScroll] = useState({
     canScrollLeft: false,
@@ -202,7 +206,7 @@ export function TrendingSection({
             <button
               type="button"
               onClick={() => scrollBy("left")}
-              aria-label="Scroll trending left"
+              aria-label={tu("common.scrollLeft")}
               className="absolute -left-3 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-2xl border border-white/15 bg-[#0a0a0f]/95 text-slate-200 shadow-xl backdrop-blur-sm transition hover:border-white/30 hover:bg-[#12121a] sm:left-2"
             >
               <ChevronLeft className="size-5" />
@@ -212,7 +216,7 @@ export function TrendingSection({
             <button
               type="button"
               onClick={() => scrollBy("right")}
-              aria-label="Scroll trending right"
+              aria-label={tu("common.scrollRight")}
               className="absolute -right-3 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-2xl border border-white/15 bg-[#0a0a0f]/95 text-slate-200 shadow-xl backdrop-blur-sm transition hover:border-white/30 hover:bg-[#12121a] sm:right-2"
             >
               <ChevronRight className="size-5" />

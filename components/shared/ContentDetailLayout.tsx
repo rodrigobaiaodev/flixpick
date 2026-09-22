@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -14,7 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { AdBanner } from "@/components/shared/AdBanner";
-import { getGenreDisplayName, MovieCard } from "@/components/shared/MovieCard";
+import { movieSlug } from "@/lib/genres";
 import {
   CastPhoto,
   TmdbProviderLogo,
@@ -22,7 +23,12 @@ import {
 import { TrailerModal } from "@/components/shared/TrailerModal";
 import { ListButton } from "@/components/shared/ListButton";
 import { WatchStatusButton } from "@/components/shared/WatchStatusButton";
-import { useTranslations } from "@/components/shared/LocaleProvider";
+import { useLocale, useTranslations } from "@/components/shared/LocaleProvider";
+import { getLocalizedGenreName } from "@/lib/i18n/genres";
+import {
+  translateTechLabel,
+  translateTechValue,
+} from "@/lib/i18n/ui";
 import type { ContentItem, Genre, Person, StreamingProvider } from "@/types/movie";
 import { cn } from "@/lib/utils";
 
@@ -99,6 +105,7 @@ export function ContentDetailLayout({
 }: ContentDetailLayoutProps) {
   const router = useRouter();
   const t = useTranslations();
+  const { locale } = useLocale();
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [activeVideoKey, setActiveVideoKey] = useState<string | null>(null);
@@ -208,7 +215,7 @@ export function ContentDetailLayout({
                   {genres.map((genre) => (
                     <li key={genre.id}>
                       <span className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-xs font-medium text-slate-200">
-                        {getGenreDisplayName(genre.id, genre.name)}
+                        {getLocalizedGenreName(locale, genre.id, genre.name)}
                       </span>
                     </li>
                   ))}
@@ -351,10 +358,10 @@ export function ContentDetailLayout({
                           className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent px-5 py-4 transition hover:border-white/20"
                         >
                           <dt className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
-                            {row.label}
+                            {translateTechLabel(locale, row.label)}
                           </dt>
                           <dd className="mt-2 text-sm font-medium leading-relaxed text-slate-100">
-                            {row.value}
+                            {translateTechValue(locale, row.value)}
                           </dd>
                         </div>
                       ))}
@@ -486,17 +493,95 @@ export function ContentDetailLayout({
           />
 
           {similar.length > 0 && (
-            <section className="pb-12">
-              <div className="mb-6 flex items-end justify-between gap-4">
-                <h2 className="font-[family-name:var(--font-display)] text-2xl tracking-wide text-white">
-                  {resolvedSimilarTitle}
-                </h2>
-                <span className="text-sm text-slate-500">{t("detail.moreLikeThis")}</span>
+            <section className="pb-14">
+              <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div className="relative pl-1">
+                  <div className="absolute -left-1 top-0 h-full w-1 rounded-full bg-gradient-to-b from-[#e50914] to-[#e50914]/20 shadow-[0_0_24px_rgba(229,9,20,0.45)]" />
+                  <h2 className="font-[family-name:var(--font-display)] text-2xl tracking-wide text-white sm:text-3xl">
+                    {resolvedSimilarTitle}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {t("detail.moreLikeThis")}
+                  </p>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-                {similar.map((item) => (
-                  <MovieCard key={item.id} movie={item} showAvailability />
-                ))}
+
+              <div className="rounded-3xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent p-4 sm:p-5">
+                <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-5 [&::-webkit-scrollbar]:hidden">
+                  {similar.map((item, index) => {
+                    const posterUrl = item.posterPath
+                      ? `https://image.tmdb.org/t/p/w342${item.posterPath}`
+                      : null;
+                    const href = `/${item.mediaType}/${item.id}/${movieSlug(item.title)}`;
+                    const year = item.releaseDate?.slice(0, 4) || "—";
+                    const genre = item.genres[0]
+                      ? getLocalizedGenreName(
+                          locale,
+                          item.genres[0].id,
+                          item.genres[0].name,
+                        )
+                      : null;
+
+                    return (
+                      <article
+                        key={`${item.mediaType}-${item.id}`}
+                        className="group relative w-[148px] shrink-0 snap-start sm:w-[180px] md:w-[200px]"
+                      >
+                        <Link href={href} className="block">
+                          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#12121a] shadow-lg transition duration-300 group-hover:-translate-y-1 group-hover:border-[#e50914]/35 group-hover:shadow-[0_12px_40px_rgba(229,9,20,0.14)]">
+                            <div className="relative aspect-[2/3] overflow-hidden">
+                              {posterUrl ? (
+                                <Image
+                                  src={posterUrl}
+                                  alt={item.title}
+                                  fill
+                                  className="object-cover transition duration-500 group-hover:scale-105"
+                                  sizes="200px"
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className="flex size-full items-center justify-center bg-white/5 text-slate-600">
+                                  —
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+                              <span
+                                className={cn(
+                                  "absolute left-2.5 top-2.5 flex size-8 items-center justify-center rounded-xl text-sm font-bold shadow-lg",
+                                  index < 3
+                                    ? "bg-gradient-to-br from-[#e50914] to-[#b20710] text-white"
+                                    : "border border-white/20 bg-black/60 text-slate-200 backdrop-blur-sm",
+                                )}
+                              >
+                                {index + 1}
+                              </span>
+                              {item.voteAverage > 0 && (
+                                <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-xl border border-white/15 bg-black/55 px-2 py-1 text-[11px] font-semibold text-amber-300 backdrop-blur-sm">
+                                  <Star className="size-3 fill-amber-400 text-amber-400" />
+                                  {item.voteAverage.toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="space-y-1 p-3.5">
+                              <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white transition group-hover:text-[#ff6b6b]">
+                                {item.title}
+                              </h3>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                                <span>{year}</span>
+                                {genre && (
+                                  <>
+                                    <span className="text-white/20">·</span>
+                                    <span className="truncate">{genre}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      </article>
+                    );
+                  })}
+                </div>
               </div>
             </section>
           )}

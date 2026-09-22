@@ -11,6 +11,10 @@ export const metadata = {
 
 export default function BrowseTVPage() {
   return (
-    <BrowseGrid mediaType="tv" title="TV Shows" apiPath="/api/browse/tv" />
+    <BrowseGrid
+      mediaType="tv"
+      titleKey="nav.tvShows"
+      apiPath="/api/browse/tv"
+    />
   );
 }

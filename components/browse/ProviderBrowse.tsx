@@ -7,6 +7,8 @@ import { FLIXPICK_MOODS, MoodIcon } from "@/components/shared/MoodButton";
 import { MovieCard, MovieCardSkeleton } from "@/components/shared/MovieCard";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
 import type { StreamingPlatform } from "@/lib/streaming-platforms";
+import { useExtraTranslations, useLocale } from "@/components/shared/LocaleProvider";
+import { getMoodLabel } from "@/lib/i18n/mood-labels";
 import type { ContentItem } from "@/types/movie";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +17,8 @@ interface ProviderBrowseProps {
 }
 
 export function ProviderBrowse({ platform }: ProviderBrowseProps) {
+  const te = useExtraTranslations();
+  const { locale, t } = useLocale();
   const [items, setItems] = useState<ContentItem[]>([]);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<"movie" | "tv">("movie");
@@ -39,7 +43,7 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
         const body = (await response.json().catch(() => ({}))) as {
           error?: string;
         };
-        throw new Error(body.error ?? "Failed to load content");
+        throw new Error(body.error ?? te("browse.failedLoad"));
       }
 
       const data = (await response.json()) as {
@@ -55,7 +59,7 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
       setTotalResults(data.totalResults ?? 0);
       setPage(pageNum);
     },
-    [platform.id, mediaType, selectedMood],
+    [platform.id, mediaType, selectedMood, te],
   );
 
   useEffect(() => {
@@ -68,7 +72,9 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
         await fetchPage(1, false);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Something went wrong");
+          setError(
+            err instanceof Error ? err.message : te("browse.failedLoad"),
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -88,7 +94,9 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
     try {
       await fetchPage(page + 1, true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load more");
+      setError(
+        err instanceof Error ? err.message : te("browse.failedMore"),
+      );
     } finally {
       setLoadingMore(false);
     }
@@ -106,7 +114,7 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
           href="/browse"
           className="mb-6 inline-block text-sm text-slate-400 transition hover:text-white sm:mb-8"
         >
-          ← Back to Browse
+          {te("browse.backToBrowse")}
         </Link>
 
         <header className="mb-8 flex flex-col gap-5 sm:mb-10 sm:flex-row sm:items-center sm:gap-6">
@@ -126,13 +134,14 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
               {platform.name}
             </h1>
             <p className="mt-2 text-sm text-slate-400 sm:text-base">
-              Discover what&apos;s available on {platform.name}. Load more to
-              explore the full catalog.
+              {te("browse.providerDesc", { name: platform.name })}
             </p>
             {!loading && totalResults > 0 && (
               <p className="mt-2 text-xs text-slate-500 sm:text-sm">
-                Showing {items.length.toLocaleString()} of{" "}
-                {totalResults.toLocaleString()} titles
+                {te("browse.showingTitles", {
+                  shown: items.length.toLocaleString(),
+                  total: totalResults.toLocaleString(),
+                })}
               </p>
             )}
           </div>
@@ -141,8 +150,8 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
         <div className="mb-6 flex flex-wrap gap-2">
           {(
             [
-              { type: "movie" as const, label: "Movies", Icon: Clapperboard },
-              { type: "tv" as const, label: "TV Shows", Icon: Tv },
+              { type: "movie" as const, label: t("nav.movies"), Icon: Clapperboard },
+              { type: "tv" as const, label: t("nav.tvShows"), Icon: Tv },
             ] as const
           ).map(({ type, label, Icon }) => {
             const selected = mediaType === type;
@@ -167,7 +176,7 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
 
         <div className="mb-8">
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-slate-500">
-            Filter by mood
+            {te("browse.filterMood")}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -180,7 +189,7 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
                   : "border-white/10 text-slate-400 hover:text-white",
               )}
             >
-              All
+              {te("browse.all")}
             </button>
             {FLIXPICK_MOODS.map((mood) => {
               const selected = selectedMood === mood.id;
@@ -197,7 +206,7 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
                   )}
                 >
                   <MoodIcon Icon={mood.Icon} selected={selected} size={18} />
-                  {mood.label}
+                  {getMoodLabel(locale, mood.id, mood.label)}
                 </button>
               );
             })}
@@ -229,7 +238,7 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
 
         {!loading && items.length === 0 && (
           <p className="py-12 text-center text-slate-500">
-            No titles found for this filter.
+            {te("browse.noTitles")}
           </p>
         )}
 
@@ -241,10 +250,13 @@ export function ProviderBrowse({ platform }: ProviderBrowseProps) {
               disabled={loadingMore}
               className="inline-flex h-12 w-full max-w-sm items-center justify-center rounded-lg bg-[#e50914] px-8 text-sm font-semibold text-white transition hover:bg-[#f6121d] disabled:opacity-50 sm:w-auto sm:min-w-[220px]"
             >
-              {loadingMore ? "Loading…" : "Load More"}
+              {loadingMore ? te("browse.loading") : te("browse.loadMore")}
             </button>
             <p className="text-xs text-slate-500">
-              Page {page} of {totalPages.toLocaleString()}
+              {te("browse.pageOf", {
+                page,
+                total: totalPages.toLocaleString(),
+              })}
             </p>
           </div>
         )}

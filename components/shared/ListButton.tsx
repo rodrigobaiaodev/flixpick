@@ -8,6 +8,7 @@ import {
   removeFromList,
 } from "@/actions/listActions";
 import { useAuth } from "@/components/shared/AuthProvider";
+import { useUiTranslations } from "@/components/shared/LocaleProvider";
 import type { ContentListData } from "@/types/list";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ export function ListButton({
   onListChange,
 }: ListButtonProps) {
   const { user, openLoginModal } = useAuth();
+  const tu = useUiTranslations();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -106,7 +108,7 @@ export function ListButton({
         type="button"
         onClick={(e) => void toggle(e)}
         disabled={loading}
-        aria-label={saved ? "Remove from My List" : "Add to My List"}
+        aria-label={saved ? tu("list.remove") : tu("list.add")}
         aria-pressed={saved}
         className={cn(
           "inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-5 text-sm font-semibold transition-all",
@@ -120,7 +122,7 @@ export function ListButton({
         <Bookmark
           className={cn("size-4", saved && "fill-[#e50914] text-[#e50914]")}
         />
-        {saved ? "Saved to My List" : "Add to My List"}
+        {saved ? tu("list.saved") : tu("list.add")}
       </button>
     );
   }
@@ -130,7 +132,7 @@ export function ListButton({
       type="button"
       onClick={(e) => void toggle(e)}
       disabled={loading}
-      aria-label={saved ? "Remove from My List" : "Add to My List"}
+      aria-label={saved ? tu("list.remove") : tu("list.add")}
       aria-pressed={saved}
       className={cn(
         "btn-compact flex size-9 items-center justify-center rounded-full border border-white/20 shadow-lg backdrop-blur-sm transition-all",

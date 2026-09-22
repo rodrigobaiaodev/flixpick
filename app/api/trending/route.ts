@@ -4,13 +4,15 @@ import {
   getTVWatchProviders,
   getWatchProviders,
 } from "@/lib/tmdb";
+import { getRequestTmdbLanguage } from "@/lib/i18n/server";
 import type { ContentItem } from "@/types/movie";
 
 export const revalidate = 3600;
 
 export async function GET() {
   try {
-    const trending = await getTrendingAll("day");
+    const language = await getRequestTmdbLanguage();
+    const trending = await getTrendingAll("day", language);
 
     const itemsWithWatch: ContentItem[] = await Promise.all(
       trending.results.map(async (item) => {

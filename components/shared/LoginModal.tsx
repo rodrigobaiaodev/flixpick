@@ -5,6 +5,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase-client";
 import { useAuth } from "@/components/shared/AuthProvider";
+import { useTranslations, useUiTranslations } from "@/components/shared/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -32,6 +33,8 @@ function GoogleIcon({ className }: { className?: string }) {
 
 export function LoginModal() {
   const { loginModalOpen, closeLoginModal, refreshUser } = useAuth();
+  const t = useTranslations();
+  const tu = useUiTranslations();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,7 +80,7 @@ export function LoginModal() {
       await refreshUser();
       closeLoginModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : tu("auth.loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -95,7 +98,7 @@ export function LoginModal() {
       });
       if (authError) throw authError;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Google sign-in failed");
+      setError(err instanceof Error ? err.message : tu("auth.googleFailed"));
       setLoading(false);
     }
   }
@@ -110,7 +113,7 @@ export function LoginModal() {
       <button
         type="button"
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        aria-label="Close modal"
+        aria-label={tu("auth.close")}
         onClick={closeLoginModal}
       />
 
@@ -119,7 +122,7 @@ export function LoginModal() {
           type="button"
           onClick={closeLoginModal}
           className="btn-compact absolute right-4 top-4 z-10 flex size-10 items-center justify-center rounded-full border border-white/10 text-slate-400 transition hover:border-white/20 hover:text-white"
-          aria-label="Close"
+          aria-label={tu("auth.close")}
         >
           <X className="size-5" />
         </button>
@@ -132,12 +135,9 @@ export function LoginModal() {
             id="login-modal-title"
             className="mt-4 text-lg font-semibold text-white"
           >
-            Sign up free — save your favorites forever
+            {tu("auth.modalTitle")}
           </h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Build your watchlist, track what you&apos;re watching, and never
-            lose a great pick.
-          </p>
+          <p className="mt-2 text-sm text-slate-400">{tu("auth.modalSubtitle")}</p>
         </div>
 
         <div className="space-y-4 p-8">
@@ -157,19 +157,19 @@ export function LoginModal() {
             className="flex min-h-[44px] w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-medium text-white transition hover:border-white/25 hover:bg-white/10 disabled:opacity-50"
           >
             <GoogleIcon className="size-5" />
-            Continue with Google
+            {tu("auth.continueGoogle")}
           </button>
 
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-white/10" />
-            <span className="text-xs text-slate-500">or</span>
+            <span className="text-xs text-slate-500">{tu("auth.or")}</span>
             <div className="h-px flex-1 bg-white/10" />
           </div>
 
           <form onSubmit={(e) => void handleEmailLogin(e)} className="space-y-4">
             <div>
               <label htmlFor="modal-email" className="sr-only">
-                Email
+                {tu("auth.email")}
               </label>
               <input
                 id="modal-email"
@@ -178,13 +178,13 @@ export function LoginModal() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email address"
+                placeholder={tu("auth.emailPlaceholder")}
                 className="w-full rounded-xl border border-white/15 bg-[#0a0a0f] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-[#e50914]/50 focus:outline-none focus:ring-1 focus:ring-[#e50914]/50"
               />
             </div>
             <div>
               <label htmlFor="modal-password" className="sr-only">
-                Password
+                {tu("auth.password")}
               </label>
               <input
                 id="modal-password"
@@ -193,7 +193,7 @@ export function LoginModal() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
+                placeholder={tu("auth.password")}
                 className="w-full rounded-xl border border-white/15 bg-[#0a0a0f] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-[#e50914]/50 focus:outline-none focus:ring-1 focus:ring-[#e50914]/50"
               />
             </div>
@@ -204,18 +204,18 @@ export function LoginModal() {
                 "min-h-[44px] w-full rounded-xl bg-[#e50914] text-sm font-semibold text-white transition hover:bg-[#f6121d] disabled:opacity-50",
               )}
             >
-              {loading ? "Signing in…" : "Sign In"}
+              {loading ? tu("auth.signingIn") : t("auth.signIn")}
             </button>
           </form>
 
           <p className="text-center text-sm text-slate-400">
-            Don&apos;t have an account?{" "}
+            {tu("auth.noAccount")}{" "}
             <Link
               href="/auth/signup"
               onClick={closeLoginModal}
               className="font-medium text-[#e50914] hover:underline"
             >
-              Sign up
+              {tu("auth.signUp")}
             </Link>
           </p>
         </div>

@@ -34,6 +34,8 @@ export interface MoodDiscoverOptions {
   refineGenreId?: number;
   /** Skip default DISCOVER_QUALITY_FILTERS and use mood thresholds only. */
   useMoodQuality?: boolean;
+  /** TMDB language code (e.g. pt-BR). */
+  language?: string;
 }
 
 type TmdbQueryValue = string | number | boolean | undefined;
@@ -183,10 +185,13 @@ async function tmdbFetch<T>(
   const url = new URL(`${baseUrl}${path.startsWith("/") ? path : `/${path}`}`);
 
   url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("language", LANGUAGE);
+
+  const language =
+    typeof params.language === "string" ? params.language : LANGUAGE;
+  url.searchParams.set("language", language);
 
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined) {
+    if (value !== undefined && key !== "language") {
       url.searchParams.set(key, String(value));
     }
   }
@@ -444,6 +449,10 @@ function buildDiscoverParams(
     params.with_watch_monetization_types = "flatrate|free|ads";
   }
 
+  if (options?.language) {
+    params.language = options.language;
+  }
+
   return params;
 }
 
@@ -509,17 +518,28 @@ export async function getTVByMood(
   };
 }
 
-export async function getMovieDetails(movieId: number): Promise<ContentItem> {
-  const data = await tmdbFetch<TmdbMovieDetails>(`/movie/${movieId}`, {
-    watch_region: WATCH_REGION,
-  });
+export async function getMovieDetails(
+  movieId: number,
+  language?: string,
+): Promise<ContentItem> {
+  const data = await tmdbFetch<TmdbMovieDetails>(
+    `/movie/${movieId}`,
+    {
+      watch_region: WATCH_REGION,
+      ...(language ? { language } : {}),
+    },
+  );
 
   return mapTmdbMovieToMovie(data);
 }
 
-export async function getTVDetails(tvId: number): Promise<ContentItem> {
+export async function getTVDetails(
+  tvId: number,
+  language?: string,
+): Promise<ContentItem> {
   const data = await tmdbFetch<TmdbTVDetails>(`/tv/${tvId}`, {
     watch_region: WATCH_REGION,
+    ...(language ? { language } : {}),
   });
 
   return mapTmdbTVToContentItem(data);
@@ -594,10 +614,14 @@ export async function getTrendingMovies(
 
 export async function getTrendingAll(
   timeWindow: "day" | "week",
+  language?: string,
 ): Promise<MovieSearchResult> {
   const data = await tmdbFetch<TmdbPaginatedResponse<TmdbTrendingAllItem>>(
     `/trending/all/${timeWindow}`,
-    { watch_region: WATCH_REGION },
+    {
+      watch_region: WATCH_REGION,
+      ...(language ? { language } : {}),
+    },
     { next: { revalidate: 3600 } },
   );
 
@@ -636,6 +660,7 @@ export async function searchMovies(query: string): Promise<MovieSearchResult> {
 export async function searchMulti(
   query: string,
   page = 1,
+  language?: string,
 ): Promise<MovieSearchResult> {
   const data = await tmdbFetch<TmdbPaginatedResponse<TmdbTrendingAllItem>>(
     "/search/multi",
@@ -644,6 +669,7 @@ export async function searchMulti(
       include_adult: false,
       page,
       watch_region: WATCH_REGION,
+      ...(language ? { language } : {}),
     },
     { next: { revalidate: 300 } },
   );
@@ -843,6 +869,7 @@ export async function fetchRecommendCandidates(
     excludeGenreIds:
       options?.excludeGenreIds ?? getMoodExcludeGenreIds(moodSlug),
     refineGenreId: options?.refineGenreId,
+    language: options?.language,
   };
 
   if (mediaType === "both") {
@@ -878,9 +905,10 @@ export async function fetchRecommendCandidates(
 export async function buildFullMoviePick(
   movieId: number,
   moodSlug?: string,
+  language?: string,
 ): Promise<{ movie: ContentItem; trailerUrl: string | null }> {
   const [details, availability, trailerUrl] = await Promise.all([
-    getMovieDetails(movieId),
+    getMovieDetails(movieId, language),
     getWatchProviders(movieId),
     getMovieTrailerUrl(movieId),
   ]);
@@ -897,9 +925,10 @@ export async function buildFullMoviePick(
 export async function buildFullTVPick(
   tvId: number,
   moodSlug?: string,
+  language?: string,
 ): Promise<{ movie: ContentItem; trailerUrl: string | null }> {
   const [details, availability, trailerUrl] = await Promise.all([
-    getTVDetails(tvId),
+    getTVDetails(tvId, language),
     getTVWatchProviders(tvId),
     getTrailerUrl("tv", tvId),
   ]);
@@ -917,11 +946,12 @@ export async function buildFullContentPick(
   id: number,
   mediaType: MediaType,
   moodSlug?: string,
+  language?: string,
 ): Promise<{ movie: ContentItem; trailerUrl: string | null }> {
   if (mediaType === "tv") {
-    return buildFullTVPick(id, moodSlug);
+    return buildFullTVPick(id, moodSlug, language);
   }
-  return buildFullMoviePick(id, moodSlug);
+  return buildFullMoviePick(id, moodSlug, language);
 }
 
 export type BrowseSort = "popular" | "top_rated" | "new";
@@ -942,14 +972,16 @@ export async function browseDiscoverMovies(options: {
   genreId?: number;
   sort?: BrowseSort;
   page?: number;
+  language?: string;
 }): Promise<MovieSearchResult> {
-  const { genreId, sort = "popular", page = 1 } = options;
+  const { genreId, sort = "popular", page = 1, language } = options;
   const params: Record<string, TmdbQueryValue> = {
     watch_region: WATCH_REGION,
     page,
     sort_by: MOVIE_SORT_MAP[sort],
     include_adult: false,
     "vote_count.gte": 20,
+    ...(language ? { language } : {}),
   };
 
   if (genreId) params.with_genres = String(genreId);
@@ -972,14 +1004,16 @@ export async function browseDiscoverTV(options: {
   genreId?: number;
   sort?: BrowseSort;
   page?: number;
+  language?: string;
 }): Promise<MovieSearchResult> {
-  const { genreId, sort = "popular", page = 1 } = options;
+  const { genreId, sort = "popular", page = 1, language } = options;
   const params: Record<string, TmdbQueryValue> = {
     watch_region: WATCH_REGION,
     page,
     sort_by: TV_SORT_MAP[sort],
     include_adult: false,
     "vote_count.gte": 20,
+    ...(language ? { language } : {}),
   };
 
   if (genreId) params.with_genres = String(genreId);
@@ -1003,8 +1037,9 @@ export async function browseByProvider(options: {
   mediaType: MediaType;
   moodSlug?: string;
   page?: number;
+  language?: string;
 }): Promise<MovieSearchResult> {
-  const { providerId, mediaType, moodSlug, page = 1 } = options;
+  const { providerId, mediaType, moodSlug, page = 1, language } = options;
   const providerQuery = Array.isArray(providerId)
     ? providerId.join("|")
     : String(providerId);
@@ -1017,6 +1052,7 @@ export async function browseByProvider(options: {
     with_watch_providers: providerQuery,
     with_watch_monetization_types: "flatrate|free|ads",
     "vote_count.gte": 20,
+    ...(language ? { language } : {}),
   };
 
   if (moodSlug) {

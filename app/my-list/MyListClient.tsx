@@ -7,7 +7,12 @@ import { Bookmark, Film, Trash2, Tv } from "lucide-react";
 import { removeFromList } from "@/actions/listActions";
 import { ListDbSetupBanner } from "@/components/shared/ListDbSetupBanner";
 import { WatchStatusButton } from "@/components/shared/WatchStatusButton";
+import {
+  useTranslations,
+  useUiTranslations,
+} from "@/components/shared/LocaleProvider";
 import { movieSlug } from "@/lib/genres";
+import { statusLabelKey } from "@/lib/i18n/ui";
 import type { ListStatus, UserListItem } from "@/types/list";
 import { LIST_STATUS_CONFIG } from "@/types/list";
 import { cn } from "@/lib/utils";
@@ -15,24 +20,30 @@ import { cn } from "@/lib/utils";
 type TabFilter = "all" | ListStatus;
 type SortOption = "recent" | "title" | "rating";
 
-const TABS: { id: TabFilter; label: string; emoji: string }[] = [
-  { id: "all", label: "All", emoji: "📋" },
-  { id: "want_to_watch", label: "Want to Watch", emoji: "🔖" },
-  { id: "watching", label: "Watching", emoji: "▶️" },
-  { id: "watched", label: "Watched", emoji: "✅" },
-  { id: "loved", label: "Loved", emoji: "❤️" },
-];
-
 interface MyListClientProps {
   initialItems: UserListItem[];
   dbReady: boolean;
 }
 
 export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
+  const t = useTranslations();
+  const tu = useUiTranslations();
   const [items, setItems] = useState(initialItems);
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const [sort, setSort] = useState<SortOption>("recent");
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const tabs: { id: TabFilter; emoji: string; label: string }[] = [
+    { id: "all", emoji: "📋", label: tu("list.all") },
+    {
+      id: "want_to_watch",
+      emoji: "🔖",
+      label: tu(statusLabelKey("want_to_watch")),
+    },
+    { id: "watching", emoji: "▶️", label: tu(statusLabelKey("watching")) },
+    { id: "watched", emoji: "✅", label: tu(statusLabelKey("watched")) },
+    { id: "loved", emoji: "❤️", label: tu(statusLabelKey("loved")) },
+  ];
 
   const stats = useMemo(() => {
     const watched = items.filter(
@@ -96,23 +107,19 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
-      {/* Hero */}
       <section className="border-b border-white/5 bg-gradient-to-b from-[#e50914]/10 to-transparent px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#e50914]">
-                Your Collection
+                {tu("list.collection")}
               </p>
               <h1 className="mt-2 font-[family-name:var(--font-display)] tracking-wide text-white">
-                My List
+                {tu("list.title")}
               </h1>
               <p className="mt-3 max-w-xl text-slate-400">
-                You&apos;ve watched{" "}
-                <span className="font-semibold text-white">{stats.movies}</span>{" "}
-                {stats.movies === 1 ? "movie" : "movies"} and{" "}
-                <span className="font-semibold text-white">{stats.shows}</span>{" "}
-                {stats.shows === 1 ? "show" : "shows"}.
+                {tu("list.watchedMovies", { count: stats.movies })} ·{" "}
+                {tu("list.watchedShows", { count: stats.shows })}
               </p>
             </div>
             <div className="flex gap-3">
@@ -120,13 +127,13 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
                 <p className="font-[family-name:var(--font-display)] text-2xl text-white">
                   {stats.total}
                 </p>
-                <p className="text-xs text-slate-500">Saved</p>
+                <p className="text-xs text-slate-500">{tu("list.savedCount")}</p>
               </div>
               <Link
                 href="/watching"
                 className="flex min-h-[44px] items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 text-sm font-medium text-amber-200 transition hover:bg-amber-500/20"
               >
-                ▶ Watching
+                ▶ {t("nav.watching")}
               </Link>
             </div>
           </div>
@@ -138,7 +145,7 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
 
         <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -150,8 +157,7 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
                     : "border-white/10 text-slate-400 hover:border-white/20 hover:text-white",
                 )}
               >
-                <span aria-hidden>{tab.emoji}</span>{" "}
-                {tab.label}
+                <span aria-hidden>{tab.emoji}</span> {tab.label}
                 <span className="ml-1.5 text-xs opacity-60">
                   ({tabCounts[tab.id]})
                 </span>
@@ -160,15 +166,15 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
           </div>
 
           <label className="flex shrink-0 items-center gap-2 text-sm text-slate-400">
-            Sort by
+            {tu("list.sortBy")}
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortOption)}
               className="rounded-lg border border-white/15 bg-[#12121a] px-3 py-2 text-sm text-white"
             >
-              <option value="recent">Recently Added</option>
-              <option value="title">Title</option>
-              <option value="rating">Rating</option>
+              <option value="recent">{tu("list.sortRecentFull")}</option>
+              <option value="title">{tu("list.sortTitle")}</option>
+              <option value="rating">{tu("list.sortRating")}</option>
             </select>
           </label>
         </div>
@@ -179,18 +185,16 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
               <Bookmark className="size-8 text-slate-500" />
             </div>
             <p className="text-xl font-semibold text-slate-200">
-              {dbReady ? "Your list is empty" : "Ready to start collecting?"}
+              {dbReady ? tu("list.empty") : tu("list.emptySetup")}
             </p>
             <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-              {dbReady
-                ? "Tap the bookmark on any movie or show card to save it here."
-                : "Complete the one-time setup above, then save titles from any card."}
+              {dbReady ? tu("list.emptyHint") : tu("list.emptySetupHint")}
             </p>
             <Link
               href="/browse"
               className="mt-8 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#e50914] px-8 text-sm font-semibold text-white shadow-lg shadow-[#e50914]/25 transition hover:bg-[#f6121d]"
             >
-              Browse Content
+              {tu("list.browseContent")}
             </Link>
           </div>
         ) : (
@@ -207,7 +211,10 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
                   key={item.id}
                   className="group relative overflow-visible rounded-2xl border border-white/10 bg-[#12121a] transition hover:border-white/20 hover:shadow-xl hover:shadow-black/40"
                 >
-                  <Link href={detailHref} className="block overflow-hidden rounded-t-2xl">
+                  <Link
+                    href={detailHref}
+                    className="block overflow-hidden rounded-t-2xl"
+                  >
                     <div className="relative aspect-[2/3] overflow-hidden bg-white/5">
                       {posterUrl ? (
                         <Image
@@ -225,7 +232,7 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
                           ) : (
                             <Film className="size-8" />
                           )}
-                          <span className="text-xs">No poster</span>
+                          <span className="text-xs">{tu("common.noPoster")}</span>
                         </div>
                       )}
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 pt-12">
@@ -235,7 +242,7 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
                             config.color,
                           )}
                         >
-                          {config.emoji} {config.label}
+                          {config.emoji} {tu(statusLabelKey(item.status))}
                         </span>
                         <h3 className="mt-2 line-clamp-2 font-[family-name:var(--font-display)] text-sm font-bold text-white">
                           {item.content_title}
@@ -283,7 +290,7 @@ export function MyListClient({ initialItems, dbReady }: MyListClientProps) {
                     type="button"
                     onClick={() => void handleRemove(item)}
                     disabled={removingId === item.id}
-                    aria-label={`Remove ${item.content_title}`}
+                    aria-label={`${tu("list.removeItem")} ${item.content_title}`}
                     className="btn-compact absolute right-2 top-2 flex size-9 items-center justify-center rounded-full border border-white/15 bg-black/70 text-slate-300 opacity-0 backdrop-blur-sm transition hover:border-red-500/40 hover:text-red-400 group-hover:opacity-100"
                   >
                     <Trash2 className="size-4" />

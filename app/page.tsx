@@ -11,6 +11,7 @@ import { TrendingSection } from "@/components/home/TrendingSection";
 import { FLIXPICK_MOODS, MoodIcon } from "@/components/shared/MoodButton";
 import { useLocale, useTranslations } from "@/components/shared/LocaleProvider";
 import { getMoodLabel } from "@/lib/i18n/mood-labels";
+import { getLocalizedRefineLabel } from "@/lib/i18n/genres";
 import { ShareChallengeModal } from "@/components/shared/ShareChallengeModal";
 import {
   getGenreDisplayName,
@@ -367,7 +368,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (heroBackdrops.length <= 1) return;
@@ -957,7 +958,7 @@ export default function HomePage() {
                   <div
                     className="flex flex-wrap justify-center gap-1.5"
                     role="group"
-                    aria-label="Optional genre refine"
+                    aria-label={t("home.refineGenre")}
                   >
                     {refineGenreOptions.map((genre) => {
                       const selected = selectedRefineLabel === genre.label;
@@ -974,7 +975,11 @@ export default function HomePage() {
                               : "border-white/8 bg-transparent text-slate-500 hover:border-white/15 hover:text-slate-300",
                           )}
                         >
-                          {genre.label}
+                          {getLocalizedRefineLabel(
+                            locale,
+                            genre.label,
+                            genre.id,
+                          )}
                         </button>
                       );
                     })}
@@ -1076,7 +1081,7 @@ export default function HomePage() {
                 </div>
                 {!selectedMoodId && (
                   <p className="mt-3 text-center text-xs text-slate-500">
-                    Select a mood to unlock Find My Movie
+                    {t("home.unlockFind")}
                   </p>
                 )}
               </div>

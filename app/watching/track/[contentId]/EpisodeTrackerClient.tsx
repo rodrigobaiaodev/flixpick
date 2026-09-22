@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, ChevronRight, Loader2, Tv } from "lucide-react";
 import { updateWatchProgress } from "@/actions/listActions";
+import {
+  useTranslations,
+  useUiTranslations,
+} from "@/components/shared/LocaleProvider";
 import { movieSlug } from "@/lib/genres";
 import {
   computeTVProgressPercent,
@@ -50,6 +54,8 @@ export function EpisodeTrackerClient({
   item,
   showMeta,
 }: EpisodeTrackerClientProps) {
+  const t = useTranslations();
+  const tu = useUiTranslations();
   const [selectedSeason, setSelectedSeason] = useState(
     item.watch_season ?? 1,
   );
@@ -84,17 +90,17 @@ export function EpisodeTrackerClient({
         `/api/tv/season?tvId=${item.content_id}&season=${season}`,
       );
       if (!response.ok) {
-        throw new Error("Could not load episodes");
+        throw new Error(tu("watching.loadFailed"));
       }
       const data = (await response.json()) as SeasonResponse;
       setEpisodes(data.episodes);
     } catch (err) {
       setEpisodes([]);
-      setError(err instanceof Error ? err.message : "Failed to load");
+      setError(err instanceof Error ? err.message : tu("watching.loadFailed"));
     } finally {
       setLoadingEpisodes(false);
     }
-  }, [item.content_id]);
+  }, [item.content_id, tu]);
 
   useEffect(() => {
     void loadEpisodes(selectedSeason);
@@ -121,7 +127,7 @@ export function EpisodeTrackerClient({
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save progress");
+      setError(err instanceof Error ? err.message : tu("watching.loadFailed"));
     } finally {
       setSaving(false);
     }
@@ -218,7 +224,7 @@ export function EpisodeTrackerClient({
               htmlFor="season-select"
               className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500"
             >
-              Season
+              {tu("watching.season")}
             </label>
             <div className="flex flex-wrap gap-2">
               {seasonOptions.map((s) => (
@@ -244,12 +250,12 @@ export function EpisodeTrackerClient({
 
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Episode
+              {tu("watching.episode")}
             </p>
             {loadingEpisodes ? (
               <div className="flex items-center justify-center gap-2 py-12 text-slate-500">
                 <Loader2 className="size-5 animate-spin" />
-                Loading episodes…
+                {tu("common.loading")}
               </div>
             ) : episodes.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-12 text-slate-500">
@@ -294,7 +300,7 @@ export function EpisodeTrackerClient({
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                          Episode {ep.episodeNumber}
+                          {tu("watching.episode")} {ep.episodeNumber}
                         </p>
                         <p className="line-clamp-1 text-sm font-semibold text-white">
                           {ep.name}
@@ -330,15 +336,15 @@ export function EpisodeTrackerClient({
             {saving ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Saving…
+                {tu("common.saving")}
               </>
             ) : saved ? (
               <>
                 <Check className="size-4" />
-                Progress saved
+                {tu("watching.saveProgress")}
               </>
             ) : (
-              "Save progress"
+              tu("watching.saveProgress")
             )}
           </button>
         </div>

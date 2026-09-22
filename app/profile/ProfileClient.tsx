@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase-client";
 import { ListDbSetupBanner } from "@/components/shared/ListDbSetupBanner";
+import { useUiTranslations } from "@/components/shared/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 interface ProfileClientProps {
@@ -39,6 +40,7 @@ export function ProfileClient({
   favoriteGenres,
   dbReady,
 }: ProfileClientProps) {
+  const tu = useUiTranslations();
   const [displayName, setDisplayName] = useState(initialName);
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(initialName);
@@ -64,7 +66,7 @@ export function ProfileClient({
       setDisplayName(draftName.trim());
       setEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not update name");
+      setError(err instanceof Error ? err.message : tu("profile.updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -72,25 +74,25 @@ export function ProfileClient({
 
   const statCards = [
     {
-      label: "Movies Watched",
+      label: tu("profile.moviesWatched"),
       value: stats.moviesWatched,
       icon: Sparkles,
       color: "text-amber-400",
     },
     {
-      label: "Shows Watched",
+      label: tu("profile.showsWatched"),
       value: stats.showsWatched,
       icon: Play,
       color: "text-sky-400",
     },
     {
-      label: "Favorites",
+      label: tu("profile.favorites"),
       value: stats.favorites,
       icon: Heart,
       color: "text-rose-400",
     },
     {
-      label: "Total Saved",
+      label: tu("profile.totalSaved"),
       value: stats.totalList,
       icon: Bookmark,
       color: "text-emerald-400",
@@ -137,7 +139,7 @@ export function ProfileClient({
                   disabled={saving}
                   className="min-h-[44px] rounded-lg bg-[#e50914] px-5 text-sm font-semibold text-white hover:bg-[#f6121d] disabled:opacity-50"
                 >
-                  {saving ? "Saving…" : "Save"}
+                  {saving ? tu("common.saving") : tu("common.save")}
                 </button>
                 <button
                   type="button"
@@ -148,7 +150,7 @@ export function ProfileClient({
                   }}
                   className="min-h-[44px] rounded-lg border border-white/15 px-5 text-sm text-slate-300 hover:bg-white/5"
                 >
-                  Cancel
+                  {tu("common.cancel")}
                 </button>
               </div>
             </div>

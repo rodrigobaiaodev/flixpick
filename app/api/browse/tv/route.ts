@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { browseDiscoverTV, type BrowseSort } from "@/lib/tmdb";
+import { getRequestTmdbLanguage } from "@/lib/i18n/server";
 
 export const revalidate = 300;
 
@@ -13,6 +14,7 @@ export async function GET(request: Request) {
       ? Number(searchParams.get("genre"))
       : undefined;
     const sort = (searchParams.get("sort") ?? "popular") as BrowseSort;
+    const language = await getRequestTmdbLanguage();
 
     if (!VALID_SORTS.includes(sort)) {
       return NextResponse.json({ error: "Invalid sort" }, { status: 400 });
@@ -22,6 +24,7 @@ export async function GET(request: Request) {
       genreId: genreId && !Number.isNaN(genreId) ? genreId : undefined,
       sort,
       page: Number.isNaN(page) ? 1 : page,
+      language,
     });
 
     return NextResponse.json(result, {

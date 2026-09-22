@@ -9,19 +9,16 @@ import {
   updateStatus,
 } from "@/actions/listActions";
 import { useAuth } from "@/components/shared/AuthProvider";
+import { useUiTranslations } from "@/components/shared/LocaleProvider";
 import type { ContentListData, ListStatus } from "@/types/list";
-import { LIST_STATUS_CONFIG } from "@/types/list";
+import { statusLabelKey } from "@/lib/i18n/ui";
 import { cn } from "@/lib/utils";
 
-const STATUS_OPTIONS: {
-  status: ListStatus;
-  label: string;
-  emoji: string;
-}[] = [
-  { status: "want_to_watch", label: "Want to Watch", emoji: "🔖" },
-  { status: "watching", label: "Currently Watching", emoji: "▶️" },
-  { status: "watched", label: "Watched", emoji: "✅" },
-  { status: "loved", label: "Loved it", emoji: "❤️" },
+const STATUS_OPTIONS: { status: ListStatus; emoji: string }[] = [
+  { status: "want_to_watch", emoji: "🔖" },
+  { status: "watching", emoji: "▶️" },
+  { status: "watched", emoji: "✅" },
+  { status: "loved", emoji: "❤️" },
 ];
 
 const STATUS_BUTTON_STYLES: Record<ListStatus, string> = {
@@ -55,6 +52,7 @@ export function WatchStatusButton({
   onStatusChange,
 }: WatchStatusButtonProps) {
   const { user, openLoginModal } = useAuth();
+  const tu = useUiTranslations();
   const [currentStatus, setCurrentStatus] = useState<ListStatus | null>(null);
   const [isOnList, setIsOnList] = useState(isOnListProp ?? false);
   const [open, setOpen] = useState(false);
@@ -166,11 +164,12 @@ export function WatchStatusButton({
     }
   }, [currentStatus, isOnList, contentId, contentType, onStatusChange]);
 
-  const activeConfig = currentStatus
-    ? LIST_STATUS_CONFIG[currentStatus]
+  const activeLabel = currentStatus
+    ? tu(statusLabelKey(currentStatus))
     : null;
-
-  const disabled = !user ? false : !isOnList && !currentStatus;
+  const activeEmoji = currentStatus
+    ? STATUS_OPTIONS.find((o) => o.status === currentStatus)?.emoji
+    : null;
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
@@ -186,19 +185,19 @@ export function WatchStatusButton({
         }}
         disabled={loading || (!user ? false : !isOnList && !currentStatus)}
         title={
-          !isOnList && !currentStatus
-            ? "Add to My List first, then set your watch status"
-            : undefined
+          !isOnList && !currentStatus ? tu("list.addFirst") : undefined
         }
         aria-label={
           currentStatus
-            ? `Watch status: ${activeConfig?.label}`
-            : "Set watch status"
+            ? `${tu("status.label")}: ${activeLabel}`
+            : tu("status.set")
         }
         aria-expanded={open}
         className={cn(
           "inline-flex w-full items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-40",
-          variant === "detail" ? "min-h-[44px] px-5" : "min-h-[36px] w-full px-3 text-xs",
+          variant === "detail"
+            ? "min-h-[44px] px-5"
+            : "min-h-[36px] w-full px-3 text-xs",
           currentStatus
             ? STATUS_BUTTON_STYLES[currentStatus]
             : "border-white/15 bg-white/5 text-slate-400",
@@ -206,11 +205,11 @@ export function WatchStatusButton({
       >
         {currentStatus ? (
           <>
-            <span aria-hidden>{activeConfig?.emoji}</span>
-            <span>{activeConfig?.label}</span>
+            <span aria-hidden>{activeEmoji}</span>
+            <span>{activeLabel}</span>
           </>
         ) : (
-          <span>Watch Status</span>
+          <span>{tu("status.label")}</span>
         )}
         <ChevronDown
           className={cn(
@@ -229,7 +228,7 @@ export function WatchStatusButton({
           )}
         >
           <p className="border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-            Track your progress
+            {tu("status.track")}
           </p>
           {STATUS_OPTIONS.map((option) => (
             <button
@@ -244,7 +243,7 @@ export function WatchStatusButton({
               )}
             >
               <span aria-hidden>{option.emoji}</span>
-              <span>{option.label}</span>
+              <span>{tu(statusLabelKey(option.status))}</span>
               {currentStatus === option.status && (
                 <span className="ml-auto text-xs text-emerald-400">✓</span>
               )}
@@ -258,7 +257,7 @@ export function WatchStatusButton({
                 onClick={() => void handleClearStatus()}
                 className="w-full px-4 py-2 text-left text-xs text-slate-500 transition hover:bg-white/5 hover:text-red-400"
               >
-                Remove from list
+                {tu("status.removeFromList")}
               </button>
             </>
           )}
@@ -267,11 +266,23 @@ export function WatchStatusButton({
 
       {variant === "detail" && !isOnList && !currentStatus && user && (
         <p className="mt-1.5 text-xs text-slate-500">
-          Save to My List first, then set your status here or on the{" "}
-          <a href="/watching" className="text-[#e50914] hover:underline">
-            Watching
-          </a>{" "}
-          page.
+          {(() => {
+            const parts = tu("status.saveFirst", {
+              link: "|||",
+            }).split("|||");
+            return (
+              <>
+                {parts[0]}
+                <a
+                  href="/watching"
+                  className="text-[#e50914] hover:underline"
+                >
+                  {tu("status.watchingLink")}
+                </a>
+                {parts[1] ?? ""}
+              </>
+            );
+          })()}
         </p>
       )}
     </div>

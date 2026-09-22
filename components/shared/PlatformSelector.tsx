@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
+import { useUiTranslations } from "@/components/shared/LocaleProvider";
 import {
   STREAMING_PLATFORMS,
   type StreamingPlatform,
@@ -56,6 +57,7 @@ export function PlatformSelector({
   platforms: platformsProp,
   className,
 }: PlatformSelectorProps) {
+  const tu = useUiTranslations();
   const [platforms, setPlatforms] = useState<StreamingPlatform[]>(
     platformsProp ?? STREAMING_PLATFORMS,
   );
@@ -119,15 +121,15 @@ export function PlatformSelector({
               ? "border-white/30 bg-white/[0.08] text-white opacity-100 ring-2 ring-white"
               : "border-white/10 bg-white/5 text-slate-300 opacity-50 hover:opacity-70",
           )}
-        >
-          Any Platform
+          >
+          {tu("platform.any")}
         </button>
       </div>
 
       <div
         className="flex flex-wrap gap-2"
         role="group"
-        aria-label="Streaming platforms"
+        aria-label={tu("platform.any")}
       >
         {platforms.map((platform) => {
           const isSelected = selectedPlatformIds.includes(platform.id);

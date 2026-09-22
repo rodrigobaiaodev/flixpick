@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getMoviePageData } from "@/lib/movie-detail";
 import { movieSlug } from "@/lib/genres";
+import { getRequestTmdbLanguage } from "@/lib/i18n/server";
 import { parseContentId, parseSlugFromIdParam } from "@/lib/route-params";
 import { MovieDetailContent } from "./MovieDetailContent";
 
@@ -21,7 +22,8 @@ export async function generateMetadata({
   }
 
   try {
-    const { movie } = await getMoviePageData(movieId);
+    const language = await getRequestTmdbLanguage();
+    const { movie } = await getMoviePageData(movieId, language);
     return {
       title: `${movie.title} | FlixPick`,
       description: movie.overview?.slice(0, 160) ?? `Watch ${movie.title} on FlixPick.`,
@@ -47,9 +49,11 @@ export default async function MoviePage({ params }: MoviePageProps) {
     notFound();
   }
 
+  const language = await getRequestTmdbLanguage();
+
   let data;
   try {
-    data = await getMoviePageData(movieId);
+    data = await getMoviePageData(movieId, language);
   } catch {
     notFound();
   }

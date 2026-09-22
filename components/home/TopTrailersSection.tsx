@@ -6,7 +6,11 @@ import Link from "next/link";
 import { Clapperboard, Play, Tv } from "lucide-react";
 import { movieSlug } from "@/lib/genres";
 import { TrailerModal } from "@/components/shared/TrailerModal";
-import { useTranslations } from "@/components/shared/LocaleProvider";
+import {
+  useLocale,
+  useTranslations,
+  useUiTranslations,
+} from "@/components/shared/LocaleProvider";
 import type { ContentItem } from "@/types/movie";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +32,7 @@ function TrailerCard({
   rank: number;
   onPlay: () => void;
 }) {
+  const tu = useUiTranslations();
   const thumb = item.backdropPath
     ? `https://image.tmdb.org/t/p/w500${item.backdropPath}`
     : item.posterPath
@@ -76,7 +81,7 @@ function TrailerCard({
               ) : (
                 <Clapperboard className="size-3" />
               )}
-              {item.mediaType === "tv" ? "Series" : "Movie"}
+              {item.mediaType === "tv" ? tu("common.series") : tu("common.movie")}
               {year && <span className="text-white/30">·</span>}
               {year}
             </div>
@@ -108,6 +113,8 @@ function TrailerSkeleton() {
 
 export function TopTrailersSection() {
   const t = useTranslations();
+  const tu = useUiTranslations();
+  const { locale } = useLocale();
   const [trailers, setTrailers] = useState<TrailerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,14 +135,14 @@ export function TopTrailersSection() {
           const body = (await response.json().catch(() => ({}))) as {
             error?: string;
           };
-          throw new Error(body.error ?? "Failed to load trailers");
+          throw new Error(body.error ?? tu("trailers.failed"));
         }
         const data = (await response.json()) as TrailersResponse;
         if (!cancelled) setTrailers(data.trailers ?? []);
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : "Something went wrong",
+            err instanceof Error ? err.message : t("common.somethingWrong"),
           );
         }
       } finally {
@@ -147,7 +154,7 @@ export function TopTrailersSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale, t, tu]);
 
   return (
     <>

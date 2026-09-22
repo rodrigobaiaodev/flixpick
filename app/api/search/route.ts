@@ -8,6 +8,7 @@ import {
   enrichContentWithAvailability,
   searchMulti,
 } from "@/lib/tmdb";
+import { getRequestTmdbLanguage } from "@/lib/i18n/server";
 import type { MediaType } from "@/types/movie";
 
 export const revalidate = 300;
@@ -21,6 +22,7 @@ export async function GET(request: Request) {
     const page = Number(searchParams.get("page") ?? "1");
     const mediaType = (searchParams.get("mediaType") ?? "all") as SearchMediaFilter;
     const providerSlug = searchParams.get("provider") ?? "";
+    const language = await getRequestTmdbLanguage();
 
     if (!query) {
       return NextResponse.json({ error: "Missing search query" }, { status: 400 });
@@ -33,6 +35,7 @@ export async function GET(request: Request) {
     const searchResult = await searchMulti(
       query,
       Number.isNaN(page) || page < 1 ? 1 : page,
+      language,
     );
 
     let results = searchResult.results;

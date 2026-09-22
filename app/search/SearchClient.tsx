@@ -10,6 +10,7 @@ import {
 import { MoodIcon } from "@/components/shared/MoodButton";
 import { TmdbProviderLogo } from "@/components/shared/TmdbProviderLogo";
 import { STREAMING_PLATFORMS } from "@/lib/streaming-platforms";
+import { useExtraTranslations, useLocale, useUiTranslations } from "@/components/shared/LocaleProvider";
 import type { ContentItem } from "@/types/movie";
 import { cn } from "@/lib/utils";
 
@@ -24,17 +25,10 @@ interface SearchResponse {
   error?: string;
 }
 
-const MEDIA_FILTERS: {
-  value: MediaFilter;
-  label: string;
-  Icon: typeof Clapperboard;
-}[] = [
-  { value: "all", label: "All", Icon: Search },
-  { value: "movie", label: "Movies", Icon: Clapperboard },
-  { value: "tv", label: "TV Shows", Icon: Tv },
-];
-
 export function SearchClient() {
+  const te = useExtraTranslations();
+  const tu = useUiTranslations();
+  const { t, locale } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -54,6 +48,16 @@ export function SearchClient() {
   const [totalPages, setTotalPages] = useState(1);
 
   const activeQuery = searchParams.get("q")?.trim() ?? "";
+
+  const mediaFilters: {
+    value: MediaFilter;
+    label: string;
+    Icon: typeof Clapperboard;
+  }[] = [
+    { value: "all", label: te("search.all"), Icon: Search },
+    { value: "movie", label: t("nav.movies"), Icon: Clapperboard },
+    { value: "tv", label: t("nav.tvShows"), Icon: Tv },
+  ];
 
   const updateUrl = useCallback(
     (next: { q?: string; mediaType?: MediaFilter; provider?: string }) => {
@@ -104,7 +108,7 @@ export function SearchClient() {
         const data = (await response.json()) as SearchResponse;
 
         if (!response.ok) {
-          throw new Error(data.error ?? "Search failed");
+          throw new Error(data.error ?? tu("search.failed"));
         }
 
         if (!cancelled) {
@@ -115,7 +119,7 @@ export function SearchClient() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Search failed");
+          setError(err instanceof Error ? err.message : tu("search.failed"));
           setResults([]);
           setTotalResults(0);
         }
@@ -128,7 +132,7 @@ export function SearchClient() {
     return () => {
       cancelled = true;
     };
-  }, [activeQuery, mediaFilter, providerFilter]);
+  }, [activeQuery, mediaFilter, providerFilter, locale, tu]);
 
   const handleLoadMore = async () => {
     if (!activeQuery || page >= totalPages || loadingMore) return;
@@ -146,14 +150,14 @@ export function SearchClient() {
       const response = await fetch(`/api/search?${params.toString()}`);
       const data = (await response.json()) as SearchResponse;
       if (!response.ok) {
-        throw new Error(data.error ?? "Failed to load more");
+        throw new Error(data.error ?? tu("search.loadMoreFailed"));
       }
       setResults((prev) => [...prev, ...data.results]);
       setPage(data.page);
       setTotalPages(data.totalPages);
       setTotalResults(data.totalResults);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load more");
+      setError(err instanceof Error ? err.message : tu("search.loadMoreFailed"));
     } finally {
       setLoadingMore(false);
     }
@@ -171,10 +175,10 @@ export function SearchClient() {
       <div className="mx-auto max-w-6xl">
         <header className="mb-8">
           <h1 className="font-[family-name:var(--font-display)] text-3xl tracking-wide text-white sm:text-4xl">
-            Search
+            {te("search.title")}
           </h1>
           <p className="mt-2 text-sm text-slate-400 sm:text-base">
-            Find movies and TV shows across streaming platforms.
+            {te("search.subtitle")}
           </p>
         </header>
 
@@ -185,7 +189,7 @@ export function SearchClient() {
               type="search"
               value={queryInput}
               onChange={(event) => setQueryInput(event.target.value)}
-              placeholder="Search movies, TV shows…"
+              placeholder={te("search.placeholder")}
               className="w-full rounded-2xl border border-white/10 bg-[#12121a] py-3.5 pl-12 pr-12 text-base text-white placeholder:text-slate-500 focus:border-[#e50914]/50 focus:outline-none focus:ring-2 focus:ring-[#e50914]/20"
             />
             {queryInput && (
@@ -193,7 +197,7 @@ export function SearchClient() {
                 type="button"
                 onClick={() => setQueryInput("")}
                 className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/5 hover:text-white"
-                aria-label="Clear search"
+                aria-label={te("search.clear")}
               >
                 <X className="size-4" />
               </button>
@@ -206,10 +210,10 @@ export function SearchClient() {
             <div className="mb-4 space-y-4">
               <div>
                 <p className="mb-2 text-xs font-medium uppercase tracking-widest text-slate-500">
-                  Type
+                  {te("search.type")}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {MEDIA_FILTERS.map((filter) => {
+                  {mediaFilters.map((filter) => {
                     const selected = mediaFilter === filter.value;
                     return (
                       <button
@@ -240,7 +244,7 @@ export function SearchClient() {
 
               <div>
                 <p className="mb-2 text-xs font-medium uppercase tracking-widest text-slate-500">
-                  Platform
+                  {te("search.platform")}
                 </p>
                 <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   <button
@@ -256,7 +260,7 @@ export function SearchClient() {
                         : "border-white/10 text-slate-400 hover:text-white",
                     )}
                   >
-                    Any Platform
+                    {te("search.anyPlatform")}
                   </button>
                   {STREAMING_PLATFORMS.map((platform) => {
                     const selected = providerFilter === platform.id;
@@ -294,12 +298,11 @@ export function SearchClient() {
 
             <p className="mb-6 text-sm text-slate-500">
               {loading
-                ? "Searching…"
-                : `${results.length} result${results.length === 1 ? "" : "s"} for “${activeQuery}”${
-                    totalResults > results.length
-                      ? ` (${totalResults} total on TMDB)`
-                      : ""
-                  }`}
+                ? te("search.searching")
+                : te("search.resultsFor", {
+                    count: results.length,
+                    query: activeQuery,
+                  })}
             </p>
           </>
         )}
@@ -315,7 +318,7 @@ export function SearchClient() {
 
         {!activeQuery && !loading && (
           <p className="py-16 text-center text-slate-500">
-            Enter a title, actor, or keyword to start searching.
+            {te("search.enterTitle")}
           </p>
         )}
 
@@ -338,7 +341,7 @@ export function SearchClient() {
 
         {!loading && activeQuery && results.length === 0 && !error && (
           <p className="py-12 text-center text-slate-500">
-            No titles matched your search. Try another keyword or filter.
+            {te("search.noMatch")}
           </p>
         )}
 
@@ -350,7 +353,7 @@ export function SearchClient() {
               disabled={loadingMore}
               className="inline-flex h-12 w-full max-w-sm items-center justify-center rounded-lg bg-[#e50914] px-8 text-sm font-semibold text-white transition hover:bg-[#f6121d] disabled:opacity-50 sm:w-auto"
             >
-              {loadingMore ? "Loading…" : "Load More"}
+              {loadingMore ? te("browse.loading") : te("browse.loadMore")}
             </button>
           </div>
         )}

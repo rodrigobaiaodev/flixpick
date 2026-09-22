@@ -5,6 +5,7 @@ import {
   getTmdbDiscoverIds,
 } from "@/lib/streaming-platforms";
 import { browseByProvider } from "@/lib/tmdb";
+import { getRequestTmdbLanguage } from "@/lib/i18n/server";
 import type { MediaType } from "@/types/movie";
 
 export const revalidate = 300;
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
     const mood = searchParams.get("mood") ?? undefined;
     const mediaType = (searchParams.get("mediaType") ?? "movie") as MediaType;
     const page = Number(searchParams.get("page") ?? "1");
+    const language = await getRequestTmdbLanguage();
 
     if (!providerSlug) {
       return NextResponse.json(
@@ -43,6 +45,7 @@ export async function GET(request: Request) {
       mediaType,
       moodSlug: mood,
       page: Number.isNaN(page) ? 1 : page,
+      language,
     });
 
     return NextResponse.json(

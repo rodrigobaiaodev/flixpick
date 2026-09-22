@@ -4,6 +4,7 @@ import {
   getMoodExcludeGenreIds,
   isValidMoodSlug,
 } from "@/lib/providers-moods";
+import { getRequestTmdbLanguage } from "@/lib/i18n/server";
 import {
   buildFullContentPick,
   fetchRecommendCandidates,
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
     const excludeGenreIds = getMoodExcludeGenreIds(mood);
     const refineGenreId =
       typeof genreId === "number" && genreId > 0 ? genreId : undefined;
+    const language = await getRequestTmdbLanguage();
 
     const excludeSet = new Set(
       excludeIds.filter((id): id is number => typeof id === "number"),
@@ -101,6 +103,7 @@ export async function POST(request: Request) {
           minRating,
           excludeGenreIds,
           refineGenreId,
+          language,
         },
       );
 
@@ -139,6 +142,7 @@ export async function POST(request: Request) {
       picked.id,
       picked.mediaType,
       mood,
+      language,
     );
 
     const payload: RecommendResponseBody = {

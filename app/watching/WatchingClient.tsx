@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Check, ChevronRight, Play, Tv } from "lucide-react";
 import { updateStatus } from "@/actions/listActions";
 import { ListDbSetupBanner } from "@/components/shared/ListDbSetupBanner";
-import { useTranslations } from "@/components/shared/LocaleProvider";
+import { useTranslations, useUiTranslations } from "@/components/shared/LocaleProvider";
 import { movieSlug } from "@/lib/genres";
 import {
   computeTVProgressPercent,
@@ -39,6 +39,7 @@ export function WatchingClient({
   dbReady,
 }: WatchingClientProps) {
   const t = useTranslations();
+  const tu = useUiTranslations();
   const [items, setItems] = useState(initialItems);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -203,7 +204,9 @@ export function WatchingClient({
                         </h2>
                       </Link>
                       <p className="mt-1 text-xs uppercase tracking-wider text-slate-500">
-                        {item.content_type === "tv" ? "TV Series" : "Movie"}
+                        {item.content_type === "tv"
+                          ? tu("common.series")
+                          : tu("common.movie")}
                         {item.rating != null && item.rating > 0 && (
                           <span className="ml-2 text-amber-400">
                             ★ {Number(item.rating).toFixed(1)}

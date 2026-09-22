@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { movieSlug } from "@/lib/genres";
+import { getRequestTmdbLanguage } from "@/lib/i18n/server";
 import { getTVPageData } from "@/lib/tv-detail";
 import { parseContentId, parseSlugFromIdParam } from "@/lib/route-params";
 import { TVDetailContent } from "./TVDetailContent";
@@ -21,7 +22,8 @@ export async function generateMetadata({
   }
 
   try {
-    const { show } = await getTVPageData(tvId);
+    const language = await getRequestTmdbLanguage();
+    const { show } = await getTVPageData(tvId, language);
     return {
       title: `${show.title} | FlixPick`,
       description:
@@ -48,9 +50,11 @@ export default async function TVPage({ params }: TVPageProps) {
     notFound();
   }
 
+  const language = await getRequestTmdbLanguage();
+
   let data;
   try {
-    data = await getTVPageData(tvId);
+    data = await getTVPageData(tvId, language);
   } catch {
     notFound();
   }

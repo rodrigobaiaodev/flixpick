@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
+import { useExtraTranslations } from "@/components/shared/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 export function HeaderSearch() {
+  const te = useExtraTranslations();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -58,8 +60,8 @@ export function HeaderSearch() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search…"
-          aria-label="Search movies and TV shows"
+          placeholder={te("search.placeholder")}
+          aria-label={te("search.subtitle")}
           className="min-w-0 flex-1 bg-transparent py-2 pl-2 pr-2 text-sm text-white placeholder:text-slate-500 focus:outline-none"
         />
         {query && (
@@ -67,7 +69,7 @@ export function HeaderSearch() {
             type="button"
             onClick={() => setQuery("")}
             className="mr-2 flex size-7 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/5 hover:text-white"
-            aria-label="Clear search"
+            aria-label={te("search.clear")}
           >
             <X className="size-3.5" />
           </button>
@@ -83,7 +85,7 @@ export function HeaderSearch() {
             ? "border-[#e50914]/50 bg-[#e50914]/15 text-[#e50914]"
             : "border-white/10 text-slate-300 hover:border-white/20 hover:bg-white/5 hover:text-white",
         )}
-        aria-label={open ? "Close search" : "Open search"}
+        aria-label={open ? te("search.close") : te("search.open")}
         aria-expanded={open}
       >
         <Search className="size-5" />

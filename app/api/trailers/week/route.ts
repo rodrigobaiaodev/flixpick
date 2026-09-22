@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getRequestTmdbLanguage } from "@/lib/i18n/server";
 import { getTrailerYoutubeKey, getTrendingAll } from "@/lib/tmdb";
 import type { ContentItem } from "@/types/movie";
 
@@ -10,7 +11,8 @@ export interface WeekTrailerItem extends ContentItem {
 
 export async function GET() {
   try {
-    const trending = await getTrendingAll("week");
+    const language = await getRequestTmdbLanguage();
+    const trending = await getTrendingAll("week", language);
     const trailers: WeekTrailerItem[] = [];
 
     for (const item of trending.results) {

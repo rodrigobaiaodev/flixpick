@@ -13,7 +13,7 @@ export default function BrowseMoviesPage() {
   return (
     <BrowseGrid
       mediaType="movie"
-      title="Movies"
+      titleKey="nav.movies"
       apiPath="/api/browse/movies"
     />
   );
